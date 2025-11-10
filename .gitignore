@@ -15,7 +15,7 @@ pip-wheel-metadata/
 wheelhouse/
 
 # Virtual environments
-venv/
+.venv/
 ENV/
 env/
 .venv/
