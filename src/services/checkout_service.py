@@ -1,12 +1,12 @@
 from typing import Dict, Any
-from models.enums import StatusPedido, StatusPagamento
+from src.models.enums import StatusPedido, StatusPagamento
 from integration.pagamento_gateway import GatewayPagamentoBase # Interface
 from repositories.carrinho_repository import CarrinhoRepository
 from repositories.pedido_repository import PedidoRepository
 from repositories.produto_repository import ProdutoRepository
-from models.pedido import Pedido
-from models.item_pedido import ItemPedido
-from services.email_service import EmailService # Mock service
+from src.models.pedido import Pedido
+from src.models.item_pedido import ItemPedido
+from src.services.email_service import EmailService # Mock service
 
 # --- EXCEÇÕES PERSONALIZADAS ---
 # (Ajuda o DEV 1 a tratar erros específicos na rota da API)
