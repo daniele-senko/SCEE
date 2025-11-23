@@ -1,4 +1,4 @@
-from utils.validators.email_validator import EmailValidator
+from src.utils.validators.email_validator import EmailValidator
 
 class Usuario:
     """

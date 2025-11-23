@@ -1,4 +1,4 @@
-from models.users.user_model import Usuario
+from src.models.users.user_model import Usuario
 
 class Administrador(Usuario):
     """

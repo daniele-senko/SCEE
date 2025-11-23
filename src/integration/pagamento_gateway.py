@@ -1,7 +1,7 @@
 import abc
 from typing import Dict, Any
 # Importamos o Enum de status para tipagem e retorno padrão
-from models.enums import StatusPagamento 
+from src.models.enums import StatusPagamento 
 
 # --- INTERFACE ABSTRATA (PILAR DO POLIMORFISMO) ---
 

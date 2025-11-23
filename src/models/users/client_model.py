@@ -1,5 +1,5 @@
-from models.users.user_model import Usuario
-from utils.validators.cpf_validator import CpfValidator
+from src.models.users.user_model import Usuario
+from src.utils.validators.cpf_validator import CpfValidator
 
 class Cliente(Usuario):
     """

@@ -1,4 +1,4 @@
-from models.products.category_model import Categoria
+from src.models.products.category_model import Categoria
 # Importa o validador que você criou na task anterior
 from utils.validators.price_validator import PriceValidator
 
