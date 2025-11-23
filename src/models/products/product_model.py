@@ -1,10 +1,10 @@
 from __future__ import annotations
+
 from typing import Optional
 
-from ..base_model import BaseModel
-from .category_model import Categoria
+from src.models.base_model import BaseModel
+from src.models.products.category_model import Categoria
 from src.utils.validators.price_validator import PriceValidator
-
 
 
 class Produto(BaseModel):
