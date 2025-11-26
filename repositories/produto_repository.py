@@ -15,11 +15,12 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
         query = """
             INSERT INTO produtos 
             (nome, descricao, preco, sku, categoria_id, estoque, ativo)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 query,
                 (
                     obj['nome'],
@@ -38,12 +39,13 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
     
     def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
         """Busca um produto por ID."""
-        query = "SELECT * FROM produtos WHERE id = ?"
+        query = "SELECT * FROM produtos WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         """Lista todos os produtos."""
@@ -53,9 +55,10 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
             query += f" LIMIT {limit} OFFSET {offset}"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query)
+            cursor = conn.cursor()
+            cursor.execute(query)
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Atualiza um produto."""
@@ -64,13 +67,14 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
         
         query = """
             UPDATE produtos
-            SET nome = ?, descricao = ?, preco = ?, sku = ?,
-                categoria_id = ?, estoque = ?, ativo = ?
-            WHERE id = ?
+            SET nome = %s, descricao = %s, preco = %s, sku = %s,
+                categoria_id = %s, estoque = %s, ativo = %s
+            WHERE id = %s
         """
         
         with self._conn_factory() as conn:
-            conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 query,
                 (
                     obj['nome'],
@@ -89,10 +93,11 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
     
     def deletar(self, id: int) -> bool:
         """Deleta um produto por ID."""
-        query = "DELETE FROM produtos WHERE id = ?"
+        query = "DELETE FROM produtos WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
             conn.commit()
             return cursor.rowcount > 0
     
@@ -105,12 +110,13 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Produto ou None
         """
-        query = "SELECT * FROM produtos WHERE sku = ?"
+        query = "SELECT * FROM produtos WHERE sku = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (sku,))
+            cursor = conn.cursor()
+            cursor.execute(query, (sku,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
     
     def listar_por_categoria(self, categoria_id: int, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Lista produtos de uma categoria.
@@ -122,15 +128,16 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Lista de produtos da categoria
         """
-        query = "SELECT * FROM produtos WHERE categoria_id = ? AND ativo = 1 ORDER BY nome"
+        query = "SELECT * FROM produtos WHERE categoria_id = %s AND ativo = 1 ORDER BY nome"
         
         if limit is not None:
             query += f" LIMIT {limit}"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (categoria_id,))
+            cursor = conn.cursor()
+            cursor.execute(query, (categoria_id,))
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def buscar_com_filtros(
         self,
@@ -158,29 +165,30 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
         params = []
         
         if busca:
-            query += " AND (nome LIKE ? OR descricao LIKE ?)"
+            query += " AND (nome LIKE %s OR descricao LIKE %s)"
             busca_param = f"%{busca}%"
             params.extend([busca_param, busca_param])
         
         if categoria_id:
-            query += " AND categoria_id = ?"
+            query += " AND categoria_id = %s"
             params.append(categoria_id)
         
         if preco_min is not None:
-            query += " AND preco >= ?"
+            query += " AND preco >= %s"
             params.append(preco_min)
         
         if preco_max is not None:
-            query += " AND preco <= ?"
+            query += " AND preco <= %s"
             params.append(preco_max)
         
-        query += " ORDER BY nome LIMIT ? OFFSET ?"
+        query += " ORDER BY nome LIMIT %s OFFSET %s"
         params.extend([limit, offset])
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, params)
+            cursor = conn.cursor()
+            cursor.execute(query, params)
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def atualizar_estoque(self, produto_id: int, quantidade: int) -> bool:
         """Atualiza o estoque de um produto.
@@ -192,10 +200,11 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             True se atualizado com sucesso
         """
-        query = "UPDATE produtos SET estoque = ? WHERE id = ?"
+        query = "UPDATE produtos SET estoque = %s WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (quantidade, produto_id))
+            cursor = conn.cursor()
+            cursor.execute(query, (quantidade, produto_id))
             conn.commit()
             return cursor.rowcount > 0
     
@@ -222,7 +231,8 @@ class ProdutoRepository(BaseRepository[Dict[str, Any]]):
                 raise ValueError(f"Estoque insuficiente. Disponível: {produto['estoque']}, Solicitado: {quantidade}")
             
             # Decrementa
-            query = "UPDATE produtos SET estoque = estoque - ? WHERE id = ?"
-            cursor = conn.execute(query, (quantidade, produto_id))
+            query = "UPDATE produtos SET estoque = estoque - %s WHERE id = %s"
+            cursor = conn.cursor()
+            cursor.execute(query, (quantidade, produto_id))
             conn.commit()
             return cursor.rowcount > 0

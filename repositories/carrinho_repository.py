@@ -11,10 +11,12 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
     
     def salvar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Salva um novo carrinho."""
-        query = "INSERT INTO carrinhos (usuario_id) VALUES (?)"
+        query = "INSERT INTO carrinhos (usuario_id) VALUES (%s)"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (obj['usuario_id'],))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (obj['usuario_id'],))
             conn.commit()
             obj['id'] = cursor.lastrowid
         
@@ -22,12 +24,14 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
     
     def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
         """Busca um carrinho por ID."""
-        query = "SELECT * FROM carrinhos WHERE id = ?"
+        query = "SELECT * FROM carrinhos WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         """Lista todos os carrinhos."""
@@ -37,9 +41,11 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
             query += f" LIMIT {limit} OFFSET {offset}"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query)
+            cursor = conn.cursor()
+
+            cursor.execute(query)
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Atualiza um carrinho (normalmente apenas timestamp)."""
@@ -51,10 +57,12 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
     
     def deletar(self, id: int) -> bool:
         """Deleta um carrinho (e seus itens em cascata)."""
-        query = "DELETE FROM carrinhos WHERE id = ?"
+        query = "DELETE FROM carrinhos WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (id,))
             conn.commit()
             return cursor.rowcount > 0
     
@@ -67,12 +75,14 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Carrinho do usuário ou None
         """
-        query = "SELECT * FROM carrinhos WHERE usuario_id = ?"
+        query = "SELECT * FROM carrinhos WHERE usuario_id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (usuario_id,))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (usuario_id,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
     
     def obter_ou_criar(self, usuario_id: int) -> Dict[str, Any]:
         """Obtém o carrinho do usuário ou cria um novo se não existir.
@@ -109,11 +119,13 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
         # Verifica se o item já existe no carrinho
         query_check = """
             SELECT * FROM itens_carrinho 
-            WHERE carrinho_id = ? AND produto_id = ?
+            WHERE carrinho_id = %s AND produto_id = %s
         """
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query_check, (carrinho_id, produto_id))
+            cursor = conn.cursor()
+
+            cursor.execute(query_check, (carrinho_id, produto_id))
             item_existente = cursor.fetchone()
             
             if item_existente:
@@ -121,10 +133,12 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
                 nova_quantidade = item_existente['quantidade'] + quantidade
                 query_update = """
                     UPDATE itens_carrinho
-                    SET quantidade = ?, preco_unitario = ?
-                    WHERE id = ?
+                    SET quantidade = %s, preco_unitario = %s
+                    WHERE id = %s
                 """
-                conn.execute(query_update, (nova_quantidade, preco_unitario, item_existente['id']))
+                cursor = conn.cursor()
+
+                cursor.execute(query_update, (nova_quantidade, preco_unitario, item_existente['id']))
                 conn.commit()
                 
                 return {
@@ -138,9 +152,11 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
                 # Insere novo item
                 query_insert = """
                     INSERT INTO itens_carrinho (carrinho_id, produto_id, quantidade, preco_unitario)
-                    VALUES (?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s)
                 """
-                cursor = conn.execute(query_insert, (carrinho_id, produto_id, quantidade, preco_unitario))
+                cursor = conn.cursor()
+
+                cursor.execute(query_insert, (carrinho_id, produto_id, quantidade, preco_unitario))
                 conn.commit()
                 
                 return {
@@ -160,10 +176,12 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             True se removido com sucesso
         """
-        query = "DELETE FROM itens_carrinho WHERE id = ?"
+        query = "DELETE FROM itens_carrinho WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (item_id,))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (item_id,))
             conn.commit()
             return cursor.rowcount > 0
     
@@ -180,10 +198,12 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
         if quantidade <= 0:
             return self.remover_item(item_id)
         
-        query = "UPDATE itens_carrinho SET quantidade = ? WHERE id = ?"
+        query = "UPDATE itens_carrinho SET quantidade = %s WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (quantidade, item_id))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (quantidade, item_id))
             conn.commit()
             return cursor.rowcount > 0
     
@@ -205,14 +225,16 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
                 p.estoque
             FROM itens_carrinho ic
             INNER JOIN produtos p ON ic.produto_id = p.id
-            WHERE ic.carrinho_id = ?
+            WHERE ic.carrinho_id = %s
             ORDER BY ic.criado_em DESC
         """
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (carrinho_id,))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (carrinho_id,))
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def calcular_total(self, carrinho_id: int) -> float:
         """Calcula o valor total do carrinho.
@@ -226,11 +248,13 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
         query = """
             SELECT SUM(quantidade * preco_unitario) as total
             FROM itens_carrinho
-            WHERE carrinho_id = ?
+            WHERE carrinho_id = %s
         """
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (carrinho_id,))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (carrinho_id,))
             row = cursor.fetchone()
             return row['total'] if row and row['total'] else 0.0
     
@@ -243,9 +267,11 @@ class CarrinhoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             True se items foram removidos
         """
-        query = "DELETE FROM itens_carrinho WHERE carrinho_id = ?"
+        query = "DELETE FROM itens_carrinho WHERE carrinho_id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (carrinho_id,))
+            cursor = conn.cursor()
+
+            cursor.execute(query, (carrinho_id,))
             conn.commit()
             return cursor.rowcount > 0

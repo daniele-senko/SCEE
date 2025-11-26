@@ -21,11 +21,12 @@ class UsuarioRepository(BaseRepository[Dict[str, Any]]):
         """
         query = """
             INSERT INTO usuarios (nome, email, senha_hash, tipo)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 query,
                 (obj['nome'], obj['email'], obj['senha_hash'], obj.get('tipo', 'cliente'))
             )
@@ -43,12 +44,13 @@ class UsuarioRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Dicionário com dados do usuário ou None
         """
-        query = "SELECT * FROM usuarios WHERE id = ?"
+        query = "SELECT * FROM usuarios WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         """Lista todos os usuários com paginação.
@@ -66,9 +68,10 @@ class UsuarioRepository(BaseRepository[Dict[str, Any]]):
             query += f" LIMIT {limit} OFFSET {offset}"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query)
+            cursor = conn.cursor()
+            cursor.execute(query)
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Atualiza um usuário existente.
@@ -84,12 +87,13 @@ class UsuarioRepository(BaseRepository[Dict[str, Any]]):
         
         query = """
             UPDATE usuarios
-            SET nome = ?, email = ?, tipo = ?
-            WHERE id = ?
+            SET nome = %s, email = %s, tipo = %s
+            WHERE id = %s
         """
         
         with self._conn_factory() as conn:
-            conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 query,
                 (obj['nome'], obj['email'], obj.get('tipo', 'cliente'), obj['id'])
             )
@@ -106,10 +110,11 @@ class UsuarioRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             True se deletado, False se não encontrado
         """
-        query = "DELETE FROM usuarios WHERE id = ?"
+        query = "DELETE FROM usuarios WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
             conn.commit()
             return cursor.rowcount > 0
     
@@ -122,12 +127,13 @@ class UsuarioRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Dicionário com dados do usuário ou None
         """
-        query = "SELECT * FROM usuarios WHERE email = ?"
+        query = "SELECT * FROM usuarios WHERE email = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (email,))
+            cursor = conn.cursor()
+            cursor.execute(query, (email,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
     
     def contar_por_tipo(self, tipo: str) -> int:
         """Conta o número de usuários de um determinado tipo.
@@ -138,9 +144,10 @@ class UsuarioRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Número de usuários do tipo especificado
         """
-        query = "SELECT COUNT(*) as total FROM usuarios WHERE tipo = ?"
+        query = "SELECT COUNT(*) as total FROM usuarios WHERE tipo = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (tipo,))
+            cursor = conn.cursor()
+            cursor.execute(query, (tipo,))
             row = cursor.fetchone()
             return row['total'] if row else 0

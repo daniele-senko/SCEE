@@ -13,11 +13,12 @@ class CategoriaRepository(BaseRepository[Dict[str, Any]]):
         """Salva uma nova categoria."""
         query = """
             INSERT INTO categorias (nome, descricao, ativo)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 query,
                 (obj['nome'], obj.get('descricao'), obj.get('ativo', 1))
             )
@@ -28,12 +29,13 @@ class CategoriaRepository(BaseRepository[Dict[str, Any]]):
     
     def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
         """Busca uma categoria por ID."""
-        query = "SELECT * FROM categorias WHERE id = ?"
+        query = "SELECT * FROM categorias WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         """Lista todas as categorias."""
@@ -43,9 +45,10 @@ class CategoriaRepository(BaseRepository[Dict[str, Any]]):
             query += f" LIMIT {limit} OFFSET {offset}"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query)
+            cursor = conn.cursor()
+            cursor.execute(query)
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Atualiza uma categoria."""
@@ -54,12 +57,13 @@ class CategoriaRepository(BaseRepository[Dict[str, Any]]):
         
         query = """
             UPDATE categorias
-            SET nome = ?, descricao = ?, ativo = ?
-            WHERE id = ?
+            SET nome = %s, descricao = %s, ativo = %s
+            WHERE id = %s
         """
         
         with self._conn_factory() as conn:
-            conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 query,
                 (obj['nome'], obj.get('descricao'), obj.get('ativo', 1), obj['id'])
             )
@@ -69,10 +73,11 @@ class CategoriaRepository(BaseRepository[Dict[str, Any]]):
     
     def deletar(self, id: int) -> bool:
         """Deleta uma categoria por ID."""
-        query = "DELETE FROM categorias WHERE id = ?"
+        query = "DELETE FROM categorias WHERE id = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (id,))
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
             conn.commit()
             return cursor.rowcount > 0
     
@@ -85,9 +90,10 @@ class CategoriaRepository(BaseRepository[Dict[str, Any]]):
         query = "SELECT * FROM categorias WHERE ativo = 1 ORDER BY nome"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query)
+            cursor = conn.cursor()
+            cursor.execute(query)
             rows = cursor.fetchall()
-            return [self._row_to_dict(row) for row in rows]
+            return rows
     
     def buscar_por_nome(self, nome: str) -> Optional[Dict[str, Any]]:
         """Busca uma categoria por nome.
@@ -98,9 +104,10 @@ class CategoriaRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Categoria ou None
         """
-        query = "SELECT * FROM categorias WHERE nome = ?"
+        query = "SELECT * FROM categorias WHERE nome = %s"
         
         with self._conn_factory() as conn:
-            cursor = conn.execute(query, (nome,))
+            cursor = conn.cursor()
+            cursor.execute(query, (nome,))
             row = cursor.fetchone()
-            return self._row_to_dict(row) if row else None
+            return row
