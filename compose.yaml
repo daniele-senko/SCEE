@@ -1,34 +1,68 @@
 services:
 
   mariadb:
-    container_name: mariadb_scee
-    image: mariadb
+    container_name: scee_mariadb
+    image: mariadb:12
     restart: always
     environment:
       MARIADB_ROOT_PASSWORD: scee123
       MYSQL_DATABASE: SCEE
       MYSQL_USER: scee_user
       MYSQL_PASSWORD: scee_pass
-
     ports:
       - 13306:3306
-
     volumes:
-      - ~/apps/mariadb_scee/data:/var/lib/mysql
-
+      - mariadb_data:/var/lib/mysql
+      - ./schema/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./seed/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - scee_network
 
   adminer:
-    image: adminer
+    image: adminer:latest
     restart: always
     ports:
-      - 8080:8080
+      - 8081:8080
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - scee_network
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
 
-# To run this docker-compose file, save it as 'compose.yaml' and execute:
-# docker-compose -f compose.yaml up -d
-# You can then access Adminer at http://localhost:8080
-# Use the following credentials to log in:
-# System: MySQL
-# Server: db
-# Username: root
-# Password: scee123
-# https://hub.docker.com/_/mariadb
+volumes:
+  mariadb_data:
+    driver: local
+
+networks:
+  scee_network:
+    driver: bridge
+
+# 🚀 Como usar:
+# 
+# Iniciar serviços:
+#   docker-compose up -d
+# 
+# Parar serviços:
+#   docker-compose down
+# 
+# Resetar banco (apaga dados):
+#   docker-compose down -v
+#   docker-compose up -d
+# 
+# Ver logs:
+#   docker-compose logs -f mariadb
+# 
+# Acessar Adminer:
+#   http://localhost:8081
+#   Sistema: MySQL
+#   Servidor: mariadb
+#   Usuário: scee_user
+#   Senha: scee_pass
+#   Banco: SCEE
