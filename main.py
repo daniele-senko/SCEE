@@ -6,6 +6,7 @@ Aplicação Desktop com Tkinter e MySQL
 """
 
 import sys
+import os
 import tkinter as tk
 from tkinter import messagebox
 import logging
@@ -132,12 +133,35 @@ class SCEEApp:
 
 def main():
     """Função principal"""
+    # Verificar se há display disponível
+    if not os.environ.get('DISPLAY'):
+        print("\n❌ ERRO: Nenhum display gráfico detectado!")
+        print("\n💡 Esta é uma aplicação GUI (Tkinter) que requer interface gráfica.")
+        print("\n📝 Soluções:")
+        print("   1. Execute em uma máquina com desktop (GNOME, KDE, etc.)")
+        print("   2. Use SSH com X11 forwarding: ssh -X usuario@servidor")
+        print("   3. Use VNC ou outro sistema de desktop remoto")
+        print("\n⚠️  Se estiver em um servidor headless, considere desenvolver")
+        print("   uma interface web ou CLI em vez de GUI desktop.\n")
+        sys.exit(1)
+    
     try:
         app = SCEEApp()
         app.run()
+    except tk.TclError as e:
+        if "couldn't connect to display" in str(e) or "BadLength" in str(e):
+            print("\n❌ ERRO: Não foi possível conectar ao display X11!")
+            print("\n💡 Você está executando via SSH?")
+            print("   Use: ssh -X usuario@servidor")
+            print("\n💡 Ou execute em uma máquina com interface gráfica local.\n")
+            sys.exit(1)
+        else:
+            logger.error(f"Erro Tkinter: {e}", exc_info=True)
+            print(f"\n❌ Erro ao iniciar interface gráfica: {e}\n")
+            sys.exit(1)
     except Exception as e:
         logger.error(f"Erro ao iniciar aplicação: {e}", exc_info=True)
-        messagebox.showerror("Erro Fatal", f"Não foi possível iniciar a aplicação:\n{e}")
+        print(f"\n❌ Erro fatal: {e}\n")
         sys.exit(1)
 
 
