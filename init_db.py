@@ -2,7 +2,7 @@
 """Script para inicializar o banco de dados do projeto SCEE.
 
 Este script:
-1. Cria o banco de dados SQLite
+1. Conecta ao banco de dados MySQL/MariaDB
 2. Executa o schema (cria todas as tabelas)
 3. Opcionalmente popula com dados de seed
 

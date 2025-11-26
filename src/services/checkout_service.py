@@ -66,7 +66,7 @@ class CheckoutService:
         valor_total = carrinho.calcular_total() # Assume que este método está no Model Carrinho
         
         # 2. INICIAR TRANSAÇÃO (RNF07.1)
-        # O PedidoRepository é responsável por abrir a conexão e a transação SQLite
+        # O PedidoRepository é responsável por abrir a conexão e a transação MySQL
         conexao = self.pedido_repo.iniciar_transacao() 
         
         try:
