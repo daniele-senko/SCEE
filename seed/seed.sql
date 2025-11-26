@@ -1,8 +1,8 @@
--- Dados de seed para o projeto SCEE
+-- Dados de seed para o projeto SCEE - MySQL/MariaDB
 -- Dados iniciais para desenvolvimento e testes
 
 -- Inserir categorias
-INSERT OR IGNORE INTO categorias (id, nome, descricao, ativo) VALUES
+INSERT IGNORE INTO categorias (id, nome, descricao, ativo) VALUES
 (1, 'Eletrônicos', 'Produtos eletrônicos e tecnologia', 1),
 (2, 'Roupas', 'Vestuário masculino e feminino', 1),
 (3, 'Livros', 'Livros e publicações', 1),
@@ -10,7 +10,7 @@ INSERT OR IGNORE INTO categorias (id, nome, descricao, ativo) VALUES
 (5, 'Esportes', 'Artigos esportivos e fitness', 1);
 
 -- Inserir produtos de exemplo
-INSERT OR IGNORE INTO produtos (id, nome, descricao, preco, sku, categoria_id, estoque, ativo) VALUES
+INSERT IGNORE INTO produtos (id, nome, descricao, preco, sku, categoria_id, estoque, ativo) VALUES
 -- Eletrônicos
 (1, 'Fone de Ouvido Bluetooth', 'Fone sem fio com cancelamento de ruído', 199.90, 'ELET-FONE-001', 1, 50, 1),
 (2, 'Mouse Gamer RGB', 'Mouse óptico com iluminação RGB e 7 botões programáveis', 129.90, 'ELET-MOUSE-001', 1, 30, 1),
@@ -37,7 +37,7 @@ INSERT OR IGNORE INTO produtos (id, nome, descricao, preco, sku, categoria_id, e
 (15, 'Halteres 5kg (Par)', 'Par de halteres emborrachados', 119.90, 'ESP-HALT-001', 5, 30, 1);
 
 -- Inserir imagens de produtos (URLs de exemplo)
-INSERT OR IGNORE INTO imagens_produto (produto_id, url, prioridade) VALUES
+INSERT IGNORE INTO imagens_produto (produto_id, url, prioridade) VALUES
 (1, '/images/produtos/fone-bluetooth-1.jpg', 1),
 (1, '/images/produtos/fone-bluetooth-2.jpg', 2),
 (2, '/images/produtos/mouse-gamer-1.jpg', 1),
@@ -57,19 +57,19 @@ INSERT OR IGNORE INTO imagens_produto (produto_id, url, prioridade) VALUES
 
 -- Inserir usuário administrador padrão (senha: admin123)
 -- Hash bcrypt de 'admin123': $2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYqW.6NMjaa
-INSERT OR IGNORE INTO usuarios (id, nome, email, senha_hash, tipo) VALUES
+INSERT IGNORE INTO usuarios (id, nome, email, senha_hash, tipo) VALUES
 (1, 'Administrador', 'admin@scee.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYqW.6NMjaa', 'administrador');
 
-INSERT OR IGNORE INTO administradores (usuario_id, cargo, nivel_acesso) VALUES
+INSERT IGNORE INTO administradores (usuario_id, cargo, nivel_acesso) VALUES
 (1, 'Administrador Geral', 3);
 
 -- Inserir usuário cliente de exemplo (senha: cliente123)
 -- Hash bcrypt de 'cliente123': $2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW
-INSERT OR IGNORE INTO usuarios (id, nome, email, senha_hash, tipo) VALUES
+INSERT IGNORE INTO usuarios (id, nome, email, senha_hash, tipo) VALUES
 (2, 'João Silva', 'joao@email.com', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', 'cliente');
 
-INSERT OR IGNORE INTO clientes_info (usuario_id, cpf, telefone, data_nascimento) VALUES
+INSERT IGNORE INTO clientes_info (usuario_id, cpf, telefone, data_nascimento) VALUES
 (2, '123.456.789-00', '(11) 98765-4321', '1990-05-15');
 
-INSERT OR IGNORE INTO enderecos (usuario_id, logradouro, numero, complemento, bairro, cidade, estado, cep, principal) VALUES
+INSERT IGNORE INTO enderecos (usuario_id, logradouro, numero, complemento, bairro, cidade, estado, cep, principal) VALUES
 (2, 'Rua das Flores', '123', 'Apto 45', 'Centro', 'São Paulo', 'SP', '01234-567', 1);
