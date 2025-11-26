@@ -19,6 +19,20 @@ SCEE é um sistema completo de comércio eletrônico desenvolvido como projeto a
 
 ## 🚀 Quick Start
 
+### Método 1: Script Automático (Recomendado)
+
+```bash
+# Linux / macOS
+./run.sh
+
+# Windows
+run.bat
+```
+
+O script automático faz tudo: cria venv, instala dependências, inicia Docker e executa a aplicação!
+
+### Método 2: Manual
+
 ```bash
 # 1. Clonar repositório
 git clone https://github.com/daniele-senko/SCEE.git
@@ -26,16 +40,18 @@ cd SCEE
 
 # 2. Criar ambiente virtual
 python3 -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # Linux/Mac
+# ou
+.venv\Scripts\activate     # Windows
 
 # 3. Instalar dependências
 pip install -r requirements.txt
 
 # 4. Iniciar banco de dados (Docker)
-docker-compose up -d
+docker compose up -d
 
-# 5. Inicializar schema e dados
-python init_db.py
+# 5. Aguardar e verificar banco (~30s)
+python init_db.py --wait
 
 # 6. Executar aplicação
 python main.py
