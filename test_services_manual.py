@@ -15,14 +15,33 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config.database import get_connection
 from repositories.carrinho_repository import CarrinhoRepository
 from repositories.produto_repository import ProdutoRepository
-from repositories.pedido_repository import PedidoRepository
-from repositories.usuario_repository import UsuarioRepository
-from repositories.categoria_repository import CategoriaRepository
 from src.services.carrinho_service import CarrinhoService
-from src.services.pedido_service import PedidoService
-from src.services.catalogo_service import CatalogoService
-from src.services.usuario_service import UsuarioService
-from src.services.email_service import EmailService, TipoEmail
+
+# Imports condicionais para outros services (podem não estar implementados em todas as branches)
+try:
+    from repositories.pedido_repository import PedidoRepository
+    from repositories.usuario_repository import UsuarioRepository
+    from repositories.categoria_repository import CategoriaRepository
+    from src.services.pedido_service import PedidoService
+    from src.services.catalogo_service import CatalogoService
+    from src.services.usuario_service import UsuarioService
+    from src.services.email_service import EmailService, TipoEmail
+    SERVICES_DISPONIVEIS = {
+        'carrinho': True,
+        'pedido': True,
+        'catalogo': True,
+        'usuario': True,
+        'email': True
+    }
+except ImportError as e:
+    print(f"⚠️  Alguns services não estão disponíveis nesta branch: {e}")
+    SERVICES_DISPONIVEIS = {
+        'carrinho': True,
+        'pedido': False,
+        'catalogo': False,
+        'usuario': False,
+        'email': False
+    }
 
 
 def print_separator(title):
@@ -290,18 +309,61 @@ def main():
     print("\n⚠️  IMPORTANTE: Certifique-se de que o banco está populado!")
     print("   Execute: python warmup_database.py")
     
+    # Mostrar services disponíveis
+    print("\n📋 Services disponíveis nesta branch:")
+    for service, disponivel in SERVICES_DISPONIVEIS.items():
+        status = "✅" if disponivel else "❌"
+        print(f"   {status} {service.capitalize()}Service")
+    
     input("\n▶️  Pressione ENTER para continuar...")
     
-    # Executar testes
-    test_carrinho_service()
-    test_pedido_service()
-    test_catalogo_service()
-    test_usuario_service()
-    test_email_service()
+    # Executar testes disponíveis
+    if SERVICES_DISPONIVEIS['carrinho']:
+        test_carrinho_service()
+    
+    if SERVICES_DISPONIVEIS['pedido']:
+        test_pedido_service()
+    else:
+        print_separator("PEDIDO SERVICE")
+        print("⚠️  PedidoService não disponível nesta branch")
+        print("   Execute: git checkout feature/SCEE-5.2-pedido-service")
+    
+    if SERVICES_DISPONIVEIS['catalogo']:
+        test_catalogo_service()
+    else:
+        print_separator("CATÁLOGO SERVICE")
+        print("⚠️  CatalogoService não disponível nesta branch")
+        print("   Execute: git checkout feature/SCEE-5.3-catalogo-service")
+    
+    if SERVICES_DISPONIVEIS['usuario']:
+        test_usuario_service()
+    else:
+        print_separator("USUÁRIO SERVICE")
+        print("⚠️  UsuarioService não disponível nesta branch")
+        print("   Execute: git checkout feature/SCEE-5.4-usuario-service")
+    
+    if SERVICES_DISPONIVEIS['email']:
+        test_email_service()
+    else:
+        print_separator("EMAIL SERVICE")
+        print("⚠️  EmailService não disponível nesta branch")
+        print("   Execute: git checkout feature/SCEE-5.5-email-service")
     
     print("\n" + "="*60)
-    print("  ✅ TODOS OS TESTES CONCLUÍDOS!")
+    services_testados = sum(SERVICES_DISPONIVEIS.values())
+    print(f"  ✅ {services_testados}/5 SERVICES TESTADOS!")
     print("="*60)
+    
+    if services_testados < 5:
+        print("\n💡 Dica: Para testar todos os services, acesse as outras branches:")
+        if not SERVICES_DISPONIVEIS['pedido']:
+            print("   git checkout feature/SCEE-5.2-pedido-service")
+        if not SERVICES_DISPONIVEIS['catalogo']:
+            print("   git checkout feature/SCEE-5.3-catalogo-service")
+        if not SERVICES_DISPONIVEIS['usuario']:
+            print("   git checkout feature/SCEE-5.4-usuario-service")
+        if not SERVICES_DISPONIVEIS['email']:
+            print("   git checkout feature/SCEE-5.5-email-service")
 
 
 if __name__ == '__main__':
