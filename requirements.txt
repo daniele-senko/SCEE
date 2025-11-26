@@ -1,9 +1,13 @@
+# ============================================
+# SCEE - Sistema de Comércio Eletrônico
+# ============================================
+
 # Database - MySQL/MariaDB
 pymysql==1.1.0
 cryptography==41.0.7
 sqlalchemy==2.0.23
 
-# Segurança
+# Segurança e Autenticação
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.1
 
@@ -14,5 +18,37 @@ email-validator==2.1.0
 # Pillow para imagens
 Pillow==10.1.0
 
-# Testes
+# Utilities
+python-dotenv==1.0.0
+
+# ============================================
+# TESTES E DESENVOLVIMENTO
+# ============================================
+
+# Framework de Testes
 pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Coverage
+coverage==7.3.2
+
+# Testes Assíncronos
+pytest-asyncio==0.21.1
+
+# ============================================
+# DEPENDÊNCIAS OPCIONAIS
+# ============================================
+
+# Email (para produção - substituir EmailService mock)
+# smtplib já incluído no Python padrão
+
+# Logs estruturados
+# python-json-logger==2.0.7
+
+# CI/CD
+# tox==4.11.3
+
+# Documentação
+# sphinx==7.2.6
+# sphinx-rtd-theme==2.0.0

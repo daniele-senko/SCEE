@@ -1,0 +1,95 @@
+# ============================================
+# DEPENDÊNCIAS DE DESENVOLVIMENTO
+# ============================================
+
+# Inclui todas as dependências de produção
+-r requirements.txt
+
+# ============================================
+# TESTES
+# ============================================
+
+# Pytest e plugins
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-asyncio==0.21.1
+pytest-xdist==3.5.0  # Testes paralelos
+pytest-watch==4.2.0  # Auto-reload nos testes
+
+# Coverage
+coverage[toml]==7.3.2
+coverage-badge==1.1.0
+
+# ============================================
+# QUALIDADE DE CÓDIGO
+# ============================================
+
+# Linters
+pylint==3.0.3
+flake8==6.1.0
+black==23.12.1  # Formatador
+isort==5.13.2   # Ordenar imports
+
+# Type checking
+mypy==1.7.1
+
+# Security
+bandit==1.7.5  # Análise de segurança
+safety==2.3.5  # Verifica vulnerabilidades
+
+# ============================================
+# DOCUMENTAÇÃO
+# ============================================
+
+# Sphinx
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+sphinx-autobuild==2021.3.14
+
+# Markdown
+mkdocs==1.5.3
+mkdocs-material==9.5.3
+
+# ============================================
+# DESENVOLVIMENTO
+# ============================================
+
+# Debugging
+ipdb==0.13.13
+ipython==8.18.1
+
+# Jupyter (para notebooks de desenvolvimento)
+jupyter==1.0.0
+notebook==7.0.6
+
+# Pre-commit hooks
+pre-commit==3.6.0
+
+# Build tools
+build==1.0.3
+wheel==0.42.0
+setuptools==69.0.2
+
+# CI/CD
+tox==4.11.3
+
+# ============================================
+# UTILITÁRIOS
+# ============================================
+
+# Gerenciamento de ambiente
+python-dotenv==1.0.0
+
+# HTTP requests (para testes de integração)
+requests==2.31.0
+responses==0.24.1  # Mock de requests
+
+# Tempo e datas
+freezegun==1.4.0  # Mock de datetime para testes
+
+# Faker para dados de teste
+faker==21.0.0
+
+# Rich para output colorido
+rich==13.7.0
