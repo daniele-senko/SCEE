@@ -13,8 +13,8 @@ services:
       - 13306:3306
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./schema/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./seed/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      - ./schema/*:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./seed/*:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
