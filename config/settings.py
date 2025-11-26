@@ -20,8 +20,13 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24  # 24 horas
     
-    # Configurações do banco de dados
-    database_url: str = "sqlite:///./data/scee.db"
+    # Configurações do banco de dados MySQL
+    mysql_host: str = "localhost"
+    mysql_port: int = 13306
+    mysql_user: str = "scee_user"
+    mysql_password: str = "scee_pass"
+    mysql_database: str = "SCEE"
+    database_url: str = "mysql+pymysql://scee_user:scee_pass@localhost:13306/SCEE"
     
     # Configurações de API
     api_prefix: str = "/api"
