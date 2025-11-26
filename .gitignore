@@ -16,9 +16,6 @@ wheelhouse/
 
 # Virtual environments
 .venv/
-ENV/
-env/
-.venv/
 venv.bak/
 env.bak/
 
@@ -46,12 +43,6 @@ htmlcov/
 scee.log
 *.pid
 *.sock
-
-# Environment and secrets
-.env
-.env.*
-secrets.json
-instance/
 
 # Editor temp files
 *~
