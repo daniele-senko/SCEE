@@ -7,7 +7,7 @@ Para executar:
 import pytest
 from decimal import Decimal
 from unittest.mock import Mock, MagicMock
-from src.services.carrinho_service import (
+from src.services.cart_service import (
     CarrinhoService,
     CarrinhoServiceError,
     ProdutoIndisponivelError,

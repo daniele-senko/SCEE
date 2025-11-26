@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .base_model import BaseModel
-from .products.product_model import Produto
+from ..base_model import BaseModel
+from ..products.product_model import Produto
 from src.utils.validators.price_validator import PriceValidator
 
 

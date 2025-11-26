@@ -6,8 +6,8 @@ permissões e validações de usuários.
 from typing import List, Dict, Any, Optional
 import re
 from passlib.hash import bcrypt
-from repositories.usuario_repository import UsuarioRepository
-from repositories.endereco_repository import EnderecoRepository
+from src.repositories.user_repository import UsuarioRepository
+from src.repositories.address_repository import EnderecoRepository
 
 
 class UsuarioServiceError(Exception):
