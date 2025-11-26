@@ -43,6 +43,7 @@ htmlcov/
 
 # Logs and runtime files
 *.log
+scee.log
 *.pid
 *.sock
 

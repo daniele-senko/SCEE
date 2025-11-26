@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
-"""Script para inicializar o banco de dados do projeto SCEE.
+"""Script para verificar o banco de dados do projeto SCEE.
 
-Este script:
-1. Conecta ao banco de dados MySQL/MariaDB
-2. Executa o schema (cria todas as tabelas)
-3. Opcionalmente popula com dados de seed
+⚠️ NOTA: O Docker Compose já inicializa o banco automaticamente!
 
-Usage:
-    python init_db.py              # Apenas cria schema
-    python init_db.py --seed       # Cria schema e popula com dados
-    python init_db.py --reset      # Apaga tudo e recria (CUIDADO!)
+Para uso normal:
+    docker compose up -d
+
+Para verificar o banco:
+    python init_db.py
 """
 import sys
-import argparse
+import time
 import logging
 from pathlib import Path
 
-# Adiciona o diretório raiz ao path para imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config.database import init_db, reset_db, check_connection, get_connection
+from config.database import check_connection, get_connection
 
-# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -29,92 +25,89 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_seed_data():
-    """Carrega dados de seed no banco de dados."""
-    seed_path = Path(__file__).parent / 'seed' / 'seed.sql'
+def wait_for_db(max_attempts=30):
+    """Aguarda o banco de dados estar disponível."""
+    logger.info("🔄 Aguardando banco de dados...")
     
-    if not seed_path.exists():
-        logger.warning(f"Arquivo de seed não encontrado: {seed_path}")
-        return
+    for attempt in range(1, max_attempts + 1):
+        try:
+            if check_connection():
+                logger.info("✅ Banco disponível!")
+                return True
+        except:
+            if attempt < max_attempts:
+                logger.info(f"⏳ Tentativa {attempt}/{max_attempts}...")
+                time.sleep(2)
     
-    logger.info("Carregando dados de seed...")
-    
+    return False
+
+
+def show_stats():
+    """Mostra estatísticas."""
     try:
         with get_connection() as conn:
-            with open(seed_path, 'r', encoding='utf-8') as f:
-                seed_sql = f.read()
-                conn.executescript(seed_sql)
-            conn.commit()
-        
-        logger.info("✅ Dados de seed carregados com sucesso!")
+            cursor = conn.cursor()
+            cursor.execute("SELECT VERSION()")
+            version = cursor.fetchone()
+            logger.info(f"📊 MySQL: {version[0]}")
+            
+            cursor.execute("SHOW TABLES")
+            tables = cursor.fetchall()
+            logger.info(f"📋 Tabelas: {len(tables)}")
+            
+            stats = {}
+            for table in tables:
+                cursor.execute(f"SELECT COUNT(*) FROM {table[0]}")
+                stats[table[0]] = cursor.fetchone()[0]
+            
+            logger.info("\n📊 Dados:")
+            for table, count in sorted(stats.items()):
+                if count > 0:
+                    logger.info(f"   ✓ {table}: {count}")
+            
+            cursor.close()
     except Exception as e:
-        logger.error(f"❌ Erro ao carregar dados de seed: {e}")
-        raise
+        logger.error(f"❌ Erro: {e}")
 
 
 def main():
-    """Função principal do script."""
-    parser = argparse.ArgumentParser(
-        description='Inicializa o banco de dados do projeto SCEE'
-    )
-    parser.add_argument(
-        '--seed',
-        action='store_true',
-        help='Carregar dados de seed após criar schema'
-    )
-    parser.add_argument(
-        '--reset',
-        action='store_true',
-        help='ATENÇÃO: Apaga o banco existente e recria do zero'
-    )
+    """Função principal."""
+    import argparse
     
+    parser = argparse.ArgumentParser(description='Verifica banco SCEE')
+    parser.add_argument('--wait', action='store_true', help='Aguardar banco')
     args = parser.parse_args()
     
     try:
-        if args.reset:
-            logger.warning("⚠️  ATENÇÃO: Resetando banco de dados (todos os dados serão perdidos)!")
-            resposta = input("Tem certeza? Digite 'SIM' para confirmar: ")
-            if resposta != 'SIM':
-                logger.info("Operação cancelada.")
-                return
-            
-            reset_db()
-            logger.info("✅ Banco de dados resetado!")
-        else:
-            logger.info("Inicializando banco de dados...")
-            init_db()
-            logger.info("✅ Schema criado com sucesso!")
+        logger.info("═" * 50)
+        logger.info("  SCEE - Banco de Dados")
+        logger.info("═" * 50 + "\n")
         
-        if args.seed:
-            load_seed_data()
+        if args.wait:
+            if not wait_for_db():
+                sys.exit(1)
         
-        # Verifica conexão
-        if check_connection():
-            logger.info("✅ Conexão com banco de dados OK!")
-            
-            # Mostra estatísticas
-            with get_connection() as conn:
-                cursor = conn.execute("SELECT COUNT(*) as total FROM categorias")
-                total_categorias = cursor.fetchone()['total']
-                
-                cursor = conn.execute("SELECT COUNT(*) as total FROM produtos")
-                total_produtos = cursor.fetchone()['total']
-                
-                cursor = conn.execute("SELECT COUNT(*) as total FROM usuarios")
-                total_usuarios = cursor.fetchone()['total']
-                
-                logger.info(f"📊 Estatísticas do banco:")
-                logger.info(f"   - Categorias: {total_categorias}")
-                logger.info(f"   - Produtos: {total_produtos}")
-                logger.info(f"   - Usuários: {total_usuarios}")
+        logger.info("🔍 Verificando conexão...")
+        if not check_connection():
+            logger.error("❌ Sem conexão!")
+            logger.info("\n💡 Execute: docker compose up -d")
+            sys.exit(1)
         
-        logger.info("\n🎉 Banco de dados pronto para uso!")
-        logger.info("\nPróximos passos:")
-        logger.info("1. Instalar dependências: pip install -r requirements.txt")
-        logger.info("2. Iniciar API: uvicorn api.main:app --reload")
+        logger.info("✅ Conectado!\n")
+        show_stats()
         
+        logger.info("\n" + "═" * 50)
+        logger.info("🎉 Banco pronto!")
+        logger.info("═" * 50)
+        logger.info("\n📝 Próximos passos:")
+        logger.info("   • python main.py")
+        logger.info("   • http://localhost:8081 (Adminer)")
+        
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  Cancelado")
+        sys.exit(0)
     except Exception as e:
-        logger.error(f"❌ Erro: {e}")
+        logger.error(f"\n❌ Erro: {e}")
         sys.exit(1)
 
 
