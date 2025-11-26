@@ -1,11 +1,11 @@
 from typing import Dict, Any
 from src.models.enums import StatusPedido, StatusPagamento
 from integration.pagamento_gateway import GatewayPagamentoBase # Interface
-from repositories.carrinho_repository import CarrinhoRepository
-from repositories.pedido_repository import PedidoRepository
-from repositories.produto_repository import ProdutoRepository
-from src.models.pedido import Pedido
-from src.models.item_pedido import ItemPedido
+from src.repositories.cart_repository import CarrinhoRepository
+from src.repositories.order_repository import PedidoRepository
+from src.repositories.product_repository import ProdutoRepository
+from src.models.sales.order_model import Pedido
+from src.models.sales.cart_item_model import ItemPedido
 from src.services.email_service import EmailService # Mock service
 
 # --- EXCEÇÕES PERSONALIZADAS ---

@@ -1,3 +1,0 @@
-"""
-Components Package - Componentes reutilizáveis
-"""

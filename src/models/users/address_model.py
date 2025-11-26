@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .base_model import BaseModel
-from .users.client_model import Cliente
+from ..base_model import BaseModel
+from .client_model import Cliente
 
 
 class Endereco(BaseModel):

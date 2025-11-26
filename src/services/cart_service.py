@@ -5,8 +5,8 @@ básicas e avançadas de estoque, preços, limites e integridade.
 """
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
-from repositories.carrinho_repository import CarrinhoRepository
-from repositories.produto_repository import ProdutoRepository
+from src.repositories.cart_repository import CarrinhoRepository
+from src.repositories.product_repository import ProdutoRepository
 
 
 class CarrinhoServiceError(Exception):

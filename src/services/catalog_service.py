@@ -5,8 +5,8 @@ de produtos e categorias.
 """
 from typing import List, Dict, Any, Optional, Tuple
 from decimal import Decimal
-from repositories.produto_repository import ProdutoRepository
-from repositories.categoria_repository import CategoriaRepository
+from src.repositories.product_repository import ProdutoRepository
+from src.repositories.category_repository import CategoriaRepository
 
 
 class CatalogoServiceError(Exception):

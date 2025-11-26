@@ -15,15 +15,15 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config.database import get_connection
 from repositories.carrinho_repository import CarrinhoRepository
 from repositories.produto_repository import ProdutoRepository
-from src.services.carrinho_service import CarrinhoService
+from src.services.cart_service import CarrinhoService
 
 # Imports condicionais para outros services (podem não estar implementados em todas as branches)
 try:
     from repositories.pedido_repository import PedidoRepository
     from repositories.usuario_repository import UsuarioRepository
     from repositories.categoria_repository import CategoriaRepository
-    from src.services.pedido_service import PedidoService
-    from src.services.catalogo_service import CatalogoService
+    from src.services.order_service import PedidoService
+    from src.services.catalog_service import CatalogoService
     from src.services.usuario_service import UsuarioService
     from src.services.email_service import EmailService, TipoEmail
     SERVICES_DISPONIVEIS = {

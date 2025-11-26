@@ -6,9 +6,9 @@ de status, transições, cancelamento e consultas avançadas.
 from typing import List, Dict, Any, Optional, Set
 from decimal import Decimal
 from datetime import datetime, timedelta
-from repositories.pedido_repository import PedidoRepository
-from repositories.produto_repository import ProdutoRepository
-from repositories.usuario_repository import UsuarioRepository
+from src.repositories.order_repository import PedidoRepository
+from src.repositories.product_repository import ProdutoRepository
+from src.repositories.user_repository import UsuarioRepository
 
 
 class PedidoServiceError(Exception):
