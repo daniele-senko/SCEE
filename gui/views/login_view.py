@@ -8,6 +8,7 @@ import logging
 
 from src.services.auth_service import AuthService
 from repositories.usuario_repository import UsuarioRepository
+from config.database import get_connection
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class LoginView:
         self.on_success_callback = on_success_callback
         
         # Inicializar serviços
-        self.usuario_repo = UsuarioRepository()
+        self.usuario_repo = UsuarioRepository(get_connection)
         self.auth_service = AuthService(self.usuario_repo)
         
         # Criar interface
