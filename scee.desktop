@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SCEE - Sistema de Comércio Eletrônico
+Comment=Aplicação de e-commerce com Tkinter
+Exec=/home/renatoas/PycharmProjects/PythonProject/SCEE/run.sh
+Icon=/home/renatoas/PycharmProjects/PythonProject/SCEE/docs/Classe_UML.webp
+Path=/home/renatoas/PycharmProjects/PythonProject/SCEE
+Terminal=false
+Categories=Application;Development;
+StartupNotify=true
