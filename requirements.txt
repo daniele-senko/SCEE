@@ -4,6 +4,11 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
+# Database - MySQL/MariaDB
+pymysql==1.1.0
+cryptography==41.0.7
+sqlalchemy==2.0.23
+
 # Segurança
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
