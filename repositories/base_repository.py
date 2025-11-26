@@ -5,7 +5,6 @@ seguindo o padrão Repository para abstração de acesso a dados.
 """
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, List, Optional, Dict, Any
-import sqlite3
 
 T = TypeVar('T')
 
@@ -94,16 +93,3 @@ class BaseRepository(ABC, Generic[T]):
             True se deletado com sucesso, False se não encontrado
         """
         raise NotImplementedError
-    
-    def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
-        """Converte um sqlite3.Row em dicionário.
-        
-        Args:
-            row: Row do SQLite
-            
-        Returns:
-            Dicionário com os dados da row
-        """
-        if row is None:
-            return None
-        return dict(row)
