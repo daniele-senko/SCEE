@@ -33,13 +33,19 @@ class MainWindow(tk.Tk):
         elif view_name == "HomeView":
             # Aqui faremos a Home do cliente depois
             self.current_view = tk.Label(self.container, text=f"LOJA VIRTUAL\nBem vindo cliente: {data.nome if data else 'Visitante'}")
-            
-        # --- NOVO ---
+
         elif view_name == "AdminDashboard":
             from src.views.admin.dashboard_view import DashboardView
             # Passamos o objeto usuário (data) para o dashboard saber o nome
             self.current_view = DashboardView(self.container, self, usuario_logado=data)
-        # ------------
+
+        elif view_name == "ManageProducts":
+            from src.views.admin.manage_products_view import ManageProductsView
+            self.current_view = ManageProductsView(self.container, self)
+
+        elif view_name == "ProductFormView":
+            from src.views.admin.product_form_view import ProductFormView
+            self.current_view = ProductFormView(self.container, self)
             
         else:
             self.current_view = tk.Label(self.container, text=f"404 - Tela {view_name} não encontrada")
