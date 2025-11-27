@@ -2,22 +2,21 @@ from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, List, Optional
 from src.config.database import DatabaseConnection
 
-# T representa um Objeto de Modelo (ex: Usuario, Produto)
 T = TypeVar('T')
 
 class BaseRepository(ABC, Generic[T]):
     """
     Classe Abstrata Base para repositórios.
-    Gerencia a conexão com o SQLite usando o padrão Singleton.
     """
     
     def __init__(self):
-        # CORREÇÃO AQUI: Não pedimos argumentos, pegamos a instância direto
+        # 1. Cria a conexão do jeito novo
         self.db = DatabaseConnection()
-    
-    def _get_connection(self):
-        """Helper para pegar a conexão do singleton"""
-        return self.db.get_connection()
+        
+        # 2. --- HACK DE COMPATIBILIDADE ---
+        # Cria um apelido para que o código do seu amigo (que chama _conn_factory)
+        # seja redirecionado para a função certa (get_connection).
+        self._conn_factory = self.db.get_connection
 
     @abstractmethod
     def salvar(self, obj: T) -> T:

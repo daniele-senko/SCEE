@@ -99,8 +99,21 @@ class DashboardView(tk.Frame):
         tk.Label(card, text=value, font=Config.FONT_HEADER, bg=Config.COLOR_WHITE, fg=Config.COLOR_TEXT).pack(anchor="w")
 
     def _handle_navigation(self, action):
+        """Gerencia a troca de telas baseada no botão clicado."""
+        print(f"DEBUG: Tentando navegar para {action}") # Para confirmação
+        
         if action == "Logout":
+            # Limpa o usuário e volta pro login
             self.controller.show_view("LoginView")
+            
+        elif action == "ManageProducts":
+            # Vai para a lista de produtos
+            self.controller.show_view("ManageProducts")
+            
+        elif action == "ManageOrders":
+            # Futuro: Vai para lista de pedidos (se já existir no main_window)
+            # self.controller.show_view("ManageOrders") 
+            print("Tela de Pedidos ainda não implementada")
+            
         else:
-            # Futuro: Navegar para outras telas de admin
-            print(f"Navegar para {action}")
+            print(f"Ação desconhecida: {action}")
