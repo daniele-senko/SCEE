@@ -1,49 +1,38 @@
-"""Configurações do projeto SCEE.
+import os
+from dotenv import load_dotenv
 
-Utiliza Pydantic BaseSettings para gerenciar variáveis de ambiente
-e configurações do sistema.
-"""
-from pydantic_settings import BaseSettings
-from typing import Optional
+# Carrega variáveis do arquivo .env (se existir)
+load_dotenv()
 
-
-class Settings(BaseSettings):
-    """Configurações principais do projeto."""
+class Config:
+    """
+    Configurações globais do sistema.
+    Classe Python pura, sem dependência do Pydantic.
+    """
     
-    # Configurações gerais
-    project_name: str = "SCEE - Sistema de Comércio Eletrônico"
-    version: str = "1.0.0"
-    debug: bool = True
+    # --- Caminhos e Sistema ---
+    # Pega o diretório raiz do projeto dinamicamente
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
-    # Configurações de segurança
-    secret_key: str = "dev-secret-key-change-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24  # 24 horas
+    # Configuração do Banco
+    DB_NAME = os.getenv("DB_NAME", "scee_loja.db")
+    DB_PATH = os.path.join(BASE_DIR, "data", DB_NAME)
     
-    # Configurações do banco de dados MySQL
-    mysql_host: str = "localhost"
-    mysql_port: int = 13306
-    mysql_user: str = "scee_user"
-    mysql_password: str = "scee_pass"
-    mysql_database: str = "SCEE"
-    database_url: str = "mysql+pymysql://scee_user:scee_pass@localhost:13306/SCEE"
+    # --- Interface Gráfica (UI/Tkinter) ---
+    APP_NAME = "SCEE - Eletrônicos"
+    WINDOW_SIZE = "1024x768"
     
-    # Configurações de API
-    api_prefix: str = "/api"
-    cors_origins: list = ["*"]  # Em produção, especificar domínios permitidos
+    # Paleta de Cores (Tema Escuro Profissional)
+    COLOR_PRIMARY = "#2C3E50"      # Azul Petróleo (Menus)
+    COLOR_SECONDARY = "#E74C3C"    # Vermelho (Ações/Alerta)
+    COLOR_ACCENT = "#3498DB"       # Azul Claro (Destaques)
+    COLOR_BG = "#ECF0F1"           # Fundo Cinza Claro
+    COLOR_WHITE = "#FFFFFF"        # Branco
+    COLOR_TEXT = "#2C3E50"         # Texto Escuro
+    COLOR_TEXT_LIGHT = "#7F8C8D"   # Texto Secundário
     
-    # Configurações de paginação
-    default_page_size: int = 20
-    max_page_size: int = 100
-    
-    # Configurações de upload
-    max_upload_size: int = 5 * 1024 * 1024  # 5MB
-    allowed_image_extensions: list = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-
-
-# Instância global de configurações
-settings = Settings()
+    # Fontes Padrão (Tuplas para o Tkinter)
+    FONT_TITLE = ("Helvetica", 24, "bold")
+    FONT_HEADER = ("Helvetica", 16, "bold")
+    FONT_BODY = ("Helvetica", 12)
+    FONT_SMALL = ("Helvetica", 10)
