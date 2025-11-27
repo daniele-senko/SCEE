@@ -31,8 +31,8 @@ class MainWindow(tk.Tk):
             self.current_view = tk.Label(self.container, text="Tela de Cadastro (Em Breve)")
             
         elif view_name == "HomeView":
-            # Aqui faremos a Home do cliente depois
-            self.current_view = tk.Label(self.container, text=f"LOJA VIRTUAL\nBem vindo cliente: {data.nome if data else 'Visitante'}")
+            from src.views.client.home_view import HomeView
+            self.current_view = HomeView(self.container, self, data=data)
 
         elif view_name == "AdminDashboard":
             from src.views.admin.dashboard_view import DashboardView
