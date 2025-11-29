@@ -1,6 +1,7 @@
 import sqlite3
 from typing import Optional
 from src.config.database import DatabaseConnection
+from src.utils.security.password_hasher import PasswordHasher
 
 
 class DatabaseSeeder:
@@ -109,12 +110,11 @@ class DatabaseSeeder:
         cursor = self.conn.cursor()
         
         # Usuário: admin@scee.com | Senha: admin123
+        senha_hash_admin = PasswordHasher.hash_password('admin123')
         cursor.execute(
             """INSERT OR IGNORE INTO usuarios (id, nome, email, senha_hash, tipo) 
                VALUES (?, ?, ?, ?, ?)""",
-            (1, 'Administrador', 'admin@scee.com', 
-             '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYqW.6NMjaa', 
-             'administrador')
+            (1, 'Administrador', 'admin@scee.com', senha_hash_admin, 'administrador')
         )
         
         cursor.execute(
@@ -130,12 +130,11 @@ class DatabaseSeeder:
         cursor = self.conn.cursor()
         
         # Usuário: joao@email.com | Senha: cliente123
+        senha_hash_cliente = PasswordHasher.hash_password('cliente123')
         cursor.execute(
             """INSERT OR IGNORE INTO usuarios (id, nome, email, senha_hash, tipo) 
                VALUES (?, ?, ?, ?, ?)""",
-            (2, 'João Silva', 'joao@email.com',
-             '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW',
-             'cliente')
+            (2, 'João Silva', 'joao@email.com', senha_hash_cliente, 'cliente')
         )
         
         cursor.execute(
