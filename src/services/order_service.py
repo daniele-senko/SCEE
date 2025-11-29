@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional, Set
 from decimal import Decimal
 from datetime import datetime, timedelta
 from src.repositories.order_repository import PedidoRepository
-from src.repositories.product_repository import ProdutoRepository
+from src.repositories.product_repository import ProductRepository
 from src.repositories.user_repository import UsuarioRepository
 
 
@@ -69,7 +69,7 @@ class PedidoService:
     def __init__(
         self,
         pedido_repo: PedidoRepository,
-        produto_repo: ProdutoRepository,
+        produto_repo: ProductRepository,
         usuario_repo: UsuarioRepository
     ):
         """Inicializa o serviço com os repositórios necessários.

@@ -6,7 +6,7 @@ básicas e avançadas de estoque, preços, limites e integridade.
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
 from src.repositories.cart_repository import CarrinhoRepository
-from src.repositories.product_repository import ProdutoRepository
+from src.repositories.product_repository import ProductRepository
 
 
 class CarrinhoServiceError(Exception):
@@ -46,7 +46,7 @@ class CarrinhoService:
     def __init__(
         self,
         carrinho_repo: CarrinhoRepository,
-        produto_repo: ProdutoRepository
+        produto_repo: ProductRepository
     ):
         """Inicializa o serviço com os repositórios necessários.
         
