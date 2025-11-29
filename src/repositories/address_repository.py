@@ -21,7 +21,7 @@ class EnderecoRepository(BaseRepository[Dict[str, Any]]):
         query = """
             INSERT INTO enderecos 
             (usuario_id, logradouro, numero, complemento, bairro, cidade, estado, cep, principal)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         with self._conn_factory() as conn:
@@ -47,26 +47,28 @@ class EnderecoRepository(BaseRepository[Dict[str, Any]]):
     
     def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
         """Busca um endereço por ID."""
-        query = "SELECT * FROM enderecos WHERE id = %s"
+        query = "SELECT * FROM enderecos WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return row
+            return dict(row) if row else None
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         """Lista todos os endereços."""
         query = "SELECT * FROM enderecos ORDER BY criado_em DESC"
         
+        params = []
         if limit is not None:
-            query += f" LIMIT {limit} OFFSET {offset}"
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-            cursor.execute(query)
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
-            return rows
+            return [dict(row) for row in rows]
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Atualiza um endereço."""
@@ -75,9 +77,9 @@ class EnderecoRepository(BaseRepository[Dict[str, Any]]):
         
         query = """
             UPDATE enderecos
-            SET logradouro = %s, numero = %s, complemento = %s, bairro = %s,
-                cidade = %s, estado = %s, cep = %s, principal = %s
-            WHERE id = %s
+            SET logradouro = ?, numero = ?, complemento = ?, bairro = ?,
+                cidade = ?, estado = ?, cep = ?, principal = ?
+            WHERE id = ?
         """
         
         with self._conn_factory() as conn:
@@ -102,7 +104,7 @@ class EnderecoRepository(BaseRepository[Dict[str, Any]]):
     
     def deletar(self, id: int) -> bool:
         """Deleta um endereço por ID."""
-        query = "DELETE FROM enderecos WHERE id = %s"
+        query = "DELETE FROM enderecos WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
@@ -119,13 +121,13 @@ class EnderecoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Lista de endereços do usuário
         """
-        query = "SELECT * FROM enderecos WHERE usuario_id = %s ORDER BY principal DESC, criado_em DESC"
+        query = "SELECT * FROM enderecos WHERE usuario_id = ? ORDER BY principal DESC, criado_em DESC"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (usuario_id,))
             rows = cursor.fetchall()
-            return rows
+            return [dict(row) for row in rows]
     
     def buscar_principal(self, usuario_id: int) -> Optional[Dict[str, Any]]:
         """Busca o endereço principal de um usuário.
@@ -136,13 +138,13 @@ class EnderecoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Endereço principal ou None
         """
-        query = "SELECT * FROM enderecos WHERE usuario_id = %s AND principal = 1 LIMIT 1"
+        query = "SELECT * FROM enderecos WHERE usuario_id = ? AND principal = 1 LIMIT 1"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (usuario_id,))
             row = cursor.fetchone()
-            return row
+            return dict(row) if row else None
     
     def definir_principal(self, id: int, usuario_id: int) -> bool:
         """Define um endereço como principal (e desmarca os outros).
@@ -158,13 +160,13 @@ class EnderecoRepository(BaseRepository[Dict[str, Any]]):
             cursor = conn.cursor()
             # Desmarca todos os endereços como não-principais
             cursor.execute(
-                "UPDATE enderecos SET principal = 0 WHERE usuario_id = %s",
+                "UPDATE enderecos SET principal = 0 WHERE usuario_id = ?",
                 (usuario_id,)
             )
             
             # Marca o endereço especificado como principal
             cursor.execute(
-                "UPDATE enderecos SET principal = 1 WHERE id = %s AND usuario_id = %s",
+                "UPDATE enderecos SET principal = 1 WHERE id = ? AND usuario_id = ?",
                 (id, usuario_id)
             )
             

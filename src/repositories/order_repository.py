@@ -21,7 +21,7 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         query = """
             INSERT INTO pedidos 
             (usuario_id, endereco_id, subtotal, frete, total, status, tipo_pagamento, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         with self._conn_factory() as conn:
@@ -47,28 +47,28 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
     
     def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
         """Busca um pedido por ID."""
-        query = "SELECT * FROM pedidos WHERE id = %s"
+        query = "SELECT * FROM pedidos WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
             cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return row
+            return dict(row) if row else None
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         """Lista todos os pedidos."""
         query = "SELECT * FROM pedidos ORDER BY criado_em DESC"
         
+        params = []
         if limit is not None:
-            query += f" LIMIT {limit} OFFSET {offset}"
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
-            cursor.execute(query)
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
-            return rows
+            return [dict(row) for row in rows]
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Atualiza um pedido (geralmente apenas status)."""
@@ -77,8 +77,8 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         
         query = """
             UPDATE pedidos
-            SET status = %s, observacoes = %s
-            WHERE id = %s
+            SET status = ?, observacoes = ?
+            WHERE id = ?
         """
         
         with self._conn_factory() as conn:
@@ -94,7 +94,7 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
     
     def deletar(self, id: int) -> bool:
         """Deleta um pedido (cuidado: pode não ser permitido em produção)."""
-        query = "DELETE FROM pedidos WHERE id = %s"
+        query = "DELETE FROM pedidos WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
@@ -128,7 +128,7 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         query = """
             INSERT INTO itens_pedido 
             (pedido_id, produto_id, nome_produto, quantidade, preco_unitario, subtotal)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?)
         """
         
         with self._conn_factory() as conn:
@@ -161,16 +161,15 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         """
         query = """
             SELECT * FROM itens_pedido
-            WHERE pedido_id = %s
+            WHERE pedido_id = ?
             ORDER BY id
         """
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
             cursor.execute(query, (pedido_id,))
             rows = cursor.fetchall()
-            return rows
+            return [dict(row) for row in rows]
     
     def buscar_completo(self, pedido_id: int) -> Optional[Dict[str, Any]]:
         """Busca um pedido com todos os detalhes (itens, endereço, usuário).
@@ -191,7 +190,7 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         # Busca dados do endereço
         query_endereco = """
             SELECT e.* FROM enderecos e
-            WHERE e.id = %s
+            WHERE e.id = ?
         """
         
         with self._conn_factory() as conn:
@@ -219,17 +218,18 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Lista de pedidos do usuário
         """
-        query = "SELECT * FROM pedidos WHERE usuario_id = %s ORDER BY criado_em DESC"
+        query = "SELECT * FROM pedidos WHERE usuario_id = ? ORDER BY criado_em DESC"
         
+        params = [usuario_id]
         if limit is not None:
-            query += f" LIMIT {limit} OFFSET {offset}"
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
-            cursor.execute(query, (usuario_id,))
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
-            return rows
+            return [dict(row) for row in rows]
     
     def listar_por_status(
         self,
@@ -247,17 +247,18 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Lista de pedidos com o status especificado
         """
-        query = "SELECT * FROM pedidos WHERE status = %s ORDER BY criado_em DESC"
+        query = "SELECT * FROM pedidos WHERE status = ? ORDER BY criado_em DESC"
         
+        params = [status]
         if limit is not None:
-            query += f" LIMIT {limit} OFFSET {offset}"
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
-            cursor.execute(query, (status,))
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
-            return rows
+            return [dict(row) for row in rows]
     
     def atualizar_status(self, pedido_id: int, novo_status: str) -> bool:
         """Atualiza o status de um pedido.
@@ -269,7 +270,7 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             True se atualizado com sucesso
         """
-        query = "UPDATE pedidos SET status = %s WHERE id = %s"
+        query = "UPDATE pedidos SET status = ? WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
@@ -287,7 +288,7 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Número de pedidos com o status
         """
-        query = "SELECT COUNT(*) as total FROM pedidos WHERE status = %s"
+        query = "SELECT COUNT(*) as total FROM pedidos WHERE status = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
@@ -309,7 +310,7 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
             query = """
                 SELECT SUM(total) as total_vendas 
                 FROM pedidos 
-                WHERE status = 'ENTREGUE' AND usuario_id = %s
+                WHERE status = 'ENTREGUE' AND usuario_id = ?
             """
             params = (usuario_id,)
         else:

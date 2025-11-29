@@ -21,7 +21,7 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
         """
         query = """
             INSERT INTO clientes_info (usuario_id, cpf, telefone, data_nascimento)
-            VALUES (%s, %s, %s, %s)
+            VALUES (?, ?, ?, ?)
         """
         
         with self._conn_factory() as conn:
@@ -44,13 +44,13 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Dicionário com dados do cliente ou None
         """
-        query = "SELECT * FROM clientes_info WHERE id = %s"
+        query = "SELECT * FROM clientes_info WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return row
+            return dict(row) if row else None
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
         """Lista todos os clientes com paginação.
@@ -64,14 +64,16 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
         """
         query = "SELECT * FROM clientes_info ORDER BY criado_em DESC"
         
+        params = []
         if limit is not None:
-            query += f" LIMIT {limit} OFFSET {offset}"
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-            cursor.execute(query)
+            cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
-            return rows
+            return [dict(row) for row in rows]
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
         """Atualiza informações de um cliente.
@@ -87,8 +89,8 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
         
         query = """
             UPDATE clientes_info
-            SET cpf = %s, telefone = %s, data_nascimento = %s
-            WHERE id = %s
+            SET cpf = ?, telefone = ?, data_nascimento = ?
+            WHERE id = ?
         """
         
         with self._conn_factory() as conn:
@@ -110,7 +112,7 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             True se deletado, False se não encontrado
         """
-        query = "DELETE FROM clientes_info WHERE id = %s"
+        query = "DELETE FROM clientes_info WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
@@ -127,13 +129,13 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Dicionário com dados do cliente ou None
         """
-        query = "SELECT * FROM clientes_info WHERE cpf = %s"
+        query = "SELECT * FROM clientes_info WHERE cpf = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (cpf,))
             row = cursor.fetchone()
-            return row
+            return dict(row) if row else None
     
     def buscar_por_usuario_id(self, usuario_id: int) -> Optional[Dict[str, Any]]:
         """Busca um cliente por ID do usuário.
@@ -144,13 +146,13 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
         Returns:
             Dicionário com dados do cliente ou None
         """
-        query = "SELECT * FROM clientes_info WHERE usuario_id = %s"
+        query = "SELECT * FROM clientes_info WHERE usuario_id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (usuario_id,))
             row = cursor.fetchone()
-            return row
+            return dict(row) if row else None
     
     def buscar_completo(self, usuario_id: int) -> Optional[Dict[str, Any]]:
         """Busca dados completos do cliente (usuário + cliente_info).
@@ -167,11 +169,11 @@ class ClienteRepository(BaseRepository[Dict[str, Any]]):
                 c.cpf, c.telefone, c.data_nascimento
             FROM usuarios u
             INNER JOIN clientes_info c ON u.id = c.usuario_id
-            WHERE u.id = %s
+            WHERE u.id = ?
         """
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (usuario_id,))
             row = cursor.fetchone()
-            return row
+            return dict(row) if row else None
