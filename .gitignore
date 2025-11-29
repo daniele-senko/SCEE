@@ -68,3 +68,6 @@ var/
 *.egg
 *.whl
 *.tar.gz
+
+# SQLite database files
+*.db
