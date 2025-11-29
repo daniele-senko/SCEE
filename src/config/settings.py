@@ -16,7 +16,7 @@ class Config:
     
     # Configuração do Banco
     DB_NAME = os.getenv("DB_NAME", "scee_loja.db")
-    DB_PATH = os.path.join(BASE_DIR, "data", DB_NAME)
+    DB_PATH = os.path.join(BASE_DIR, "database_sqlite", DB_NAME)
     
     # --- Interface Gráfica (UI/Tkinter) ---
     APP_NAME = "SCEE - Eletrônicos"
