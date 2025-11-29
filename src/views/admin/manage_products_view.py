@@ -48,8 +48,8 @@ class ManageProductsView(tk.Frame):
         toolbar.pack(fill="x", pady=(0, 10))
 
         tk.Button(
-            toolbar, 
-            text="+ Novo Produto", 
+            toolbar,
+            text="Novo Produto",
             bg=Config.COLOR_ACCENT, 
             fg="white",
             font=Config.FONT_SMALL,
@@ -58,7 +58,7 @@ class ManageProductsView(tk.Frame):
 
         tk.Button(
             toolbar, 
-            text="🗑️ Excluir", 
+            text="Excluir", 
             bg=Config.COLOR_SECONDARY, 
             fg="white",
             font=Config.FONT_SMALL,

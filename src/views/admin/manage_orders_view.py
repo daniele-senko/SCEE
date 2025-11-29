@@ -37,7 +37,7 @@ class ManageProductsView(tk.Frame):
                   command=lambda: self.controller.show_view("ProductFormView")).pack(side="left", padx=5)
 
         # Botão Excluir
-        tk.Button(toolbar, text="🗑️ Excluir Selecionado", bg=Config.COLOR_SECONDARY, fg="white",
+        tk.Button(toolbar, text="Excluir Selecionado", bg=Config.COLOR_SECONDARY, fg="white",
                   font=Config.FONT_SMALL, width=20,
                   command=self._delete_product).pack(side="left", padx=5)
 

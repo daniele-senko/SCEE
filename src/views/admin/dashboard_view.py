@@ -44,9 +44,9 @@ class DashboardView(tk.Frame):
         ).pack(pady=(0, 20))
 
         # Botões de Navegação (Estilo Flat)
-        self._create_nav_button(sidebar, "📦 Gerenciar Produtos", "ManageProducts")
-        self._create_nav_button(sidebar, "🛒 Ver Pedidos", "ManageOrders")
-        self._create_nav_button(sidebar, "🔐 Sair / Logout", "Logout", color=Config.COLOR_SECONDARY)
+        self._create_nav_button(sidebar, "Gerenciar Produtos", "ManageProducts")
+        self._create_nav_button(sidebar, "Ver Pedidos", "ManageOrders")
+        self._create_nav_button(sidebar, "Sair / Logout", "Logout", color=Config.COLOR_SECONDARY)
 
     def _create_nav_button(self, parent, text, action, color=None):
         """Helper para criar botões padronizados no menu."""

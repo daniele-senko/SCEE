@@ -4,6 +4,14 @@ from src.config.settings import Config
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
+        
+        # Configuração para evitar erro X11 BadLength
+        # Usa rendering mais simples para fontes
+        try:
+            self.tk.call('tk', 'scaling', 1.0)
+        except:
+            pass
+        
         self.title(Config.APP_NAME)
         self.geometry(Config.WINDOW_SIZE)
         self.configure(bg=Config.COLOR_BG)

@@ -4,6 +4,13 @@ import os
 # Adiciona o diretório raiz ao path do Python para garantir imports corretos
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Configuração para evitar erro X11 BadLength (RenderAddGlyphs)
+# Força Tkinter a não usar renderização Xft/fontconfig
+os.environ['TK_SILENCE_DEPRECATION'] = '1'
+# Desabilita antialiasing de fontes que causa problemas no X11
+import tkinter as tk
+tk._default_root = None
+
 from src.views.main_window import MainWindow
 from src.config.database import DatabaseConnection
 from src.config.database_initializer import DatabaseInitializer

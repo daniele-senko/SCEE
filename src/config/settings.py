@@ -32,7 +32,9 @@ class Config:
     COLOR_TEXT_LIGHT = "#7F8C8D"   # Texto Secundário
     
     # Fontes Padrão (Tuplas para o Tkinter)
-    FONT_TITLE = ("Helvetica", 24, "bold")
-    FONT_HEADER = ("Helvetica", 16, "bold")
-    FONT_BODY = ("Helvetica", 12)
-    FONT_SMALL = ("Helvetica", 10)
+    # Usando apenas fontes do sistema sem especificar família
+    # Evita erro X11 BadLength (RenderAddGlyphs) causado por fontes TrueType
+    FONT_TITLE = ("", 14, "bold")
+    FONT_HEADER = ("", 12, "bold")
+    FONT_BODY = ("", 10)
+    FONT_SMALL = ("", 9)

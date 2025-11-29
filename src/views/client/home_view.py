@@ -50,7 +50,7 @@ class HomeView(tk.Frame):
         # Botão Carrinho (Futuro)
         tk.Button(
             header,
-            text="🛒 Carrinho",
+            text="Carrinho",
             bg=Config.COLOR_ACCENT,
             fg="white",
             font=Config.FONT_SMALL,
