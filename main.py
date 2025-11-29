@@ -7,11 +7,12 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.views.main_window import MainWindow
 from src.config.database import DatabaseConnection
 from src.config.database_initializer import DatabaseInitializer
+from src.config.database_seeder import DatabaseSeeder
 
 def main():
     """Função principal que inicia a aplicação."""
     try:
-        # 1. Inicializa o banco de dados silenciosamente
+        # 1. Inicializa o banco de dados
         db = DatabaseConnection()
         initializer = DatabaseInitializer(db)
         
@@ -19,7 +20,12 @@ def main():
         if not initializer.check_database_exists():
             initializer.initialize_database()
         
-        # 2. Inicia a Interface Gráfica
+        # 2. Popula o banco com dados iniciais se necessário
+        seeder = DatabaseSeeder(db)
+        if not seeder.check_if_seeded():
+            seeder.seed_all()
+        
+        # 3. Inicia a Interface Gráfica
         app = MainWindow()
         app.mainloop()
         
