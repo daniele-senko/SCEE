@@ -11,16 +11,13 @@ from src.config.database_initializer import DatabaseInitializer
 def main():
     """Função principal que inicia a aplicação."""
     try:
-        # 1. Inicializa o banco de dados
+        # 1. Inicializa o banco de dados silenciosamente
         db = DatabaseConnection()
         initializer = DatabaseInitializer(db)
         
         # Verifica se o banco precisa ser criado
         if not initializer.check_database_exists():
-            print("📦 Banco de dados não encontrado. Criando estrutura...")
             initializer.initialize_database()
-        else:
-            print("✅ Banco de dados já existe e está pronto!")
         
         # 2. Inicia a Interface Gráfica
         app = MainWindow()
@@ -28,6 +25,8 @@ def main():
         
     except Exception as e:
         print(f"Erro fatal ao iniciar a aplicação: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
