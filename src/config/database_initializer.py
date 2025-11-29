@@ -222,13 +222,10 @@ class DatabaseInitializer:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_pedido_produto_id ON itens_pedido(produto_id);")
             
             self.conn.commit()
-            print("=" * 40)
-            print("\n Schema do banco de dados criado com sucesso!")
             
         except sqlite3.Error as e:
             self.conn.rollback()
-            print("=" * 40)
-            print("\n Erro ao criar schema do banco de dados!")
+            print(f"Erro ao criar schema: {e}")
             raise
     
     def create_triggers(self):
@@ -239,10 +236,6 @@ class DatabaseInitializer:
         cursor = self.conn.cursor()
         
         try:
-            print("=" * 40)
-            print("\n Criando triggers do banco de dados...\n")
-            print("=" * 40)
-            
             # Trigger para validar estoque ao adicionar item no carrinho
             cursor.execute("""
                 CREATE TRIGGER IF NOT EXISTS validate_estoque_carrinho
@@ -328,23 +321,16 @@ class DatabaseInitializer:
             """)
             
             self.conn.commit()
-            print("=" * 40)
-            print("\n Triggers do banco de dados criados com sucesso!")
             
         except sqlite3.Error as e:
             self.conn.rollback()
-            print("=" * 40)
-            print("\n Erro ao criar triggers do banco de dados!")
-            print("=" * 40)
+            print(f"Erro ao criar triggers: {e}")
             raise
     
     def create_views(self):
         """
         Cria as views do sistema para consultas otimizadas.
         """
-        print("=" * 40)
-        print("\n Criando views do banco de dados...\n")
-        print("=" * 40)
         cursor = self.conn.cursor()
         
         try:
@@ -409,26 +395,19 @@ class DatabaseInitializer:
             """)
             
             self.conn.commit()
-            print("=" * 40)
-            print("\n Views do banco de dados criadas com sucesso!")
             
         except sqlite3.Error as e:
-            self.conn.rollback()   
-            print("=" * 40)
-            print("\n Erro ao criar views do banco de dados!")
+            self.conn.rollback()
+            print(f"Erro ao criar views: {e}")
             raise
     
     def initialize_database(self):
         """
         Executa a inicialização completa do banco de dados.
         """
-        print(f"Iniciando configuração do banco de dados: {os.path.basename(Config.DB_PATH)}")
-
         self.create_schema()
         self.create_triggers()
         self.create_views()
-        
-        print("Banco de dados inicializado com sucesso!")
     
     def drop_all_tables(self):
         """
@@ -461,12 +440,9 @@ class DatabaseInitializer:
             cursor.execute("PRAGMA foreign_keys = ON;")
             
             self.conn.commit()
-            print("=" * 40)
-            print("Todas as tabelas e views foram removidas!")
             
         except sqlite3.Error as e:
             self.conn.rollback()
-            print("=" * 40)
             print(f"Erro ao remover tabelas: {e}")
             raise
     
