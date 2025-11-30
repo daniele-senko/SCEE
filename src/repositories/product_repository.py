@@ -1,15 +1,12 @@
-"""Repositório para gerenciamento de produtos.
-Implementa operações CRUD para a tabela produtos.
-"""
+"""Repositório para gerenciamento de produtos e suas imagens."""
 from typing import Optional, List, Dict, Any, Union
 from src.repositories.base_repository import BaseRepository
 from src.models.products.product_model import Produto
 
 class ProductRepository(BaseRepository[Dict[str, Any]]):
-    """Repositório de produtos com operações CRUD e filtros avançados."""
+    """Repositório de produtos com operações CRUD e gerenciamento de imagens."""
     
     def __init__(self):
-        # Garante que a conexão seja criada
         super().__init__()
 
     def _adaptar_para_dict(self, obj: Union[Produto, Dict]) -> Dict:
@@ -17,7 +14,6 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
         if isinstance(obj, dict):
             return obj
         
-        # Extrai dados do objeto Produto
         return {
             "id": getattr(obj, "id", None),
             "nome": getattr(obj, "nome", ""),
@@ -30,11 +26,9 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
         }
 
     def salvar(self, obj_entrada: Union[Produto, Dict]) -> Dict[str, Any]:
-        """Salva um novo produto."""
-        # Converte objeto para dict se necessário
+        """Salva um novo produto e retorna o dicionário com ID."""
         obj = self._adaptar_para_dict(obj_entrada)
 
-        # SQLite usa ? em vez de %s
         query = """
             INSERT INTO produtos 
             (nome, descricao, preco, sku, categoria_id, estoque, ativo)
@@ -63,20 +57,45 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
                 obj_entrada._id = cursor.lastrowid
         
         return obj
+
+    def salvar_imagem(self, produto_id: int, caminho_imagem: str, prioridade: int = 0):
+        """Salva o caminho/URL de uma imagem vinculada ao produto."""
+        query = """
+            INSERT INTO imagens_produto (produto_id, url, prioridade)
+            VALUES (?, ?, ?)
+        """
+        with self._conn_factory() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (produto_id, caminho_imagem, prioridade))
+            conn.commit()
+
+    def buscar_imagens(self, produto_id: int) -> List[str]:
+        """Retorna lista de URLs/Caminhos das imagens do produto."""
+        query = "SELECT url FROM imagens_produto WHERE produto_id = ? ORDER BY prioridade"
+        with self._conn_factory() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (produto_id,))
+            rows = cursor.fetchall()
+            return [row[0] for row in rows]
     
     def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
-        """Busca um produto por ID."""
+        """Busca um produto por ID, incluindo suas imagens."""
         query = "SELECT * FROM produtos WHERE id = ?"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (id,))
             row = cursor.fetchone()
-            return dict(row) if row else None
+            
+            if row:
+                dados = dict(row)
+                # Agora buscamos as imagens para retornar o produto completo
+                dados['imagens'] = self.buscar_imagens(id)
+                return dados
+            return None
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
-        """Lista produtos com JOIN na categoria para a tela."""
-        # Adicionamos o JOIN para que a tela possa mostrar o nome da categoria
+        """Lista produtos com JOIN na categoria."""
         query = """
             SELECT p.*, c.nome as categoria_nome 
             FROM produtos p
@@ -93,6 +112,8 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
+            # Na listagem geral, optamos por não carregar as imagens de todos 
+            # para manter a performance (Lazy Loading), ou carregamos apenas a principal se necessário.
             return [dict(row) for row in rows]
     
     def atualizar(self, obj_entrada: Union[Produto, Dict]) -> Dict[str, Any]:
@@ -130,6 +151,7 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
     
     def deletar(self, id: int) -> bool:
         """Deleta um produto por ID."""
+        # O banco já tem ON DELETE CASCADE, então as imagens somem do DB automaticamente.
         query = "DELETE FROM produtos WHERE id = ?"
         
         with self._conn_factory() as conn:
