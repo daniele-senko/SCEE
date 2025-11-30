@@ -1,13 +1,13 @@
 import os
 import shutil
 import uuid
-from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from src.models.products.product_model import Produto
 from src.models.products.category_model import Categoria
 from src.repositories.product_repository import ProductRepository
-from src.repositories.category_repository import CategoriaRepository 
+# CORREÇÃO: Importar com o nome correto (Inglês)
+from src.repositories.category_repository import CategoryRepository 
 from src.config.settings import Config
 
 class CatalogService:
@@ -17,10 +17,12 @@ class CatalogService:
 
     def __init__(self):
         self.product_repo = ProductRepository()
-        self.category_repo = CategoriaRepository()
+        # CORREÇÃO: Instanciar a classe correta
+        self.category_repo = CategoryRepository()
         
         # Define pasta de uploads (cria se não existir)
-        self.upload_dir = os.path.join(os.getcwd(), 'uploads', 'produtos')
+        # Usa Config.BASE_DIR para garantir o caminho correto independente de onde roda o script
+        self.upload_dir = os.path.join(Config.BASE_DIR, 'uploads', 'produtos')
         os.makedirs(self.upload_dir, exist_ok=True)
 
     def listar_categorias(self) -> List[Categoria]:
@@ -37,10 +39,10 @@ class CatalogService:
         return lista_objetos
 
     def listar_produtos(self) -> List[Produto]:
-        """Busca produtos, categorias e imagens."""
-        # Agora o repositório já traz a imagem principal na view ou podemos buscar
+        """Busca produtos e vincula suas categorias."""
         dados_produtos = self.product_repo.listar()
         
+        # Busca categorias para fazer o vínculo
         categorias_objs = self.listar_categorias()
         mapa_categorias = {c.id: c for c in categorias_objs}
         
@@ -60,8 +62,6 @@ class CatalogService:
                 categoria=categoria,
                 id=dado['id']
             )
-            # Se vier imagem da query (se você atualizou o listar do repo ou view)
-            # prod.imagem_url = dado.get('imagem_principal') 
             
             lista_produtos.append(prod)
                 
@@ -72,10 +72,10 @@ class CatalogService:
         """
         Cadastra produto e, se houver imagem, faz o upload.
         """
-        # Valida Categoria
+        # 1. Valida Categoria
         categoria_selecionada = self._buscar_categoria_por_nome(nome_categoria)
 
-        # Prepara Dict
+        # 2. Prepara Dict
         produto_dict = {
             'nome': nome,
             'sku': sku,
@@ -86,11 +86,11 @@ class CatalogService:
             'ativo': 1
         }
 
-        # Salva Produto (Recupera ID gerado)
+        # 3. Salva Produto (Recupera ID gerado)
         novo_produto = self.product_repo.salvar(produto_dict)
         produto_id = novo_produto['id']
 
-        # Processa Imagem (Se fornecida)
+        # 4. Processa Imagem (Se fornecida)
         if imagem_path:
             caminho_final = self._salvar_arquivo_em_disco(imagem_path)
             self.product_repo.salvar_imagem(produto_id, caminho_final)
@@ -121,7 +121,6 @@ class CatalogService:
             self.product_repo.salvar_imagem(produto_id, caminho_final)
 
     def remover_produto(self, id_produto: int):
-        # Nota: Idealmente deletaríamos os arquivos de imagem do disco aqui também
         return self.product_repo.deletar(id_produto)
 
     # --- MÉTODOS AUXILIARES ---
