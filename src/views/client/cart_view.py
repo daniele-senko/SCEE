@@ -83,6 +83,8 @@ class CartView(tk.Frame):
         # Busca o carrinho do usuário
         resultado = self.cart_controller.get_cart()
         
+        print(f"DEBUG CartView: Resultado get_cart = {resultado}")
+        
         if not resultado['success']:
             tk.Label(
                 self.items_frame,
@@ -94,6 +96,8 @@ class CartView(tk.Frame):
             return
         
         carrinho = resultado.get('data')
+        print(f"DEBUG CartView: Carrinho data = {carrinho}")
+        print(f"DEBUG CartView: Itens = {carrinho.get('itens') if carrinho else 'None'}")
         
         if not carrinho or not carrinho.get('itens'):
             # Carrinho vazio
