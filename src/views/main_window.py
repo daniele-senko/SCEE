@@ -36,7 +36,8 @@ class MainWindow(tk.Tk):
             self.current_view = LoginView(self.container, self)
             
         elif view_name == "RegisterView":
-            self.current_view = tk.Label(self.container, text="Tela de Cadastro (Em Breve)")
+            from src.views.client.register_view import RegisterView
+            self.current_view = RegisterView(self.container, self)
             
         elif view_name == "HomeView":
             from src.views.client.home_view import HomeView
@@ -54,6 +55,18 @@ class MainWindow(tk.Tk):
         elif view_name == "ProductFormView":
             from src.views.admin.product_form_view import ProductFormView
             self.current_view = ProductFormView(self.container, self)
+        
+        elif view_name == "CartView":
+            from src.views.client.cart_view import CartView
+            self.current_view = CartView(self.container, self, data=data)
+        
+        elif view_name == "CheckoutView":
+            from src.views.client.checkout_view import CheckoutView
+            self.current_view = CheckoutView(self.container, self, data=data)
+        
+        elif view_name == "MyOrdersView":
+            from src.views.client.my_orders_view import MyOrdersView
+            self.current_view = MyOrdersView(self.container, self, data=data)
             
         else:
             self.current_view = tk.Label(self.container, text=f"404 - Tela {view_name} não encontrada")

@@ -47,14 +47,24 @@ class HomeView(tk.Frame):
             command=lambda: self.controller.show_view("LoginView")
         ).pack(side="right")
         
-        # Botão Carrinho (Futuro)
+        # Botão Meus Pedidos
+        tk.Button(
+            header,
+            text="Meus Pedidos",
+            bg=Config.COLOR_ACCENT,
+            fg="white",
+            font=Config.FONT_SMALL,
+            command=lambda: self.controller.show_view("MyOrdersView", data=self.usuario)
+        ).pack(side="right", padx=10)
+        
+        # Botão Carrinho
         tk.Button(
             header,
             text="Carrinho",
             bg=Config.COLOR_ACCENT,
             fg="white",
             font=Config.FONT_SMALL,
-            # command=lambda: self.controller.show_view("CartView", data=self.usuario)
+            command=lambda: self.controller.show_view("CartView", data=self.usuario)
         ).pack(side="right", padx=10)
 
     def _setup_grid(self):
@@ -103,5 +113,18 @@ class HomeView(tk.Frame):
 
     def _add_to_cart(self, produto):
         """Callback quando clica em comprar no card."""
-        # Aqui chamaremos o CartService futuramente
-        messagebox.showinfo("Carrinho", f"Você clicou em: {produto.nome}\n(Carrinho em desenvolvimento)")
+        from src.controllers.cart_controller import CartController
+        
+        if not self.usuario:
+            messagebox.showwarning("Atenção", "Você precisa estar logado para adicionar ao carrinho!")
+            return
+        
+        cart_controller = CartController(self.controller)
+        cart_controller.set_current_user(self.usuario.id)
+        
+        resultado = cart_controller.add_to_cart(produto.id, quantidade=1)
+        
+        if resultado['success']:
+            messagebox.showinfo("Sucesso", f"{produto.nome} adicionado ao carrinho!")
+        else:
+            messagebox.showerror("Erro", resultado['message'])
