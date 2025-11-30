@@ -53,6 +53,10 @@ class MainWindow(tk.Tk):
         elif view_name == "ManageProducts":
             from src.views.admin.manage_products_view import ManageProductsView
             self.current_view = ManageProductsView(self.container, self, data=data)
+        
+        elif view_name == "ManageOrders":
+            from src.views.admin.manage_orders_view import ManageOrdersView
+            self.current_view = ManageOrdersView(self.container, self, data=data)
 
         elif view_name == "ProductFormView":
             from src.views.admin.product_form_view import ProductFormView
