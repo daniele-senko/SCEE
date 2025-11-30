@@ -16,6 +16,10 @@ class ManageOrdersView(tk.Frame):
         self.usuario = data  # Guarda o usuário logado
         self.admin_controller = AdminController(controller)
         
+        # Define o admin atual no controller
+        if self.usuario and hasattr(self.usuario, 'id'):
+            self.admin_controller.set_current_admin(self.usuario.id)
+        
         self._setup_ui()
         self._load_data()
 
