@@ -9,6 +9,8 @@ class MainWindow(tk.Tk):
         # Usa rendering mais simples para fontes
         try:
             self.tk.call('tk', 'scaling', 1.0)
+            # Limita cache de fontes para evitar BadLength
+            self.option_add('*Font', 'TkDefaultFont')
         except:
             pass
         
