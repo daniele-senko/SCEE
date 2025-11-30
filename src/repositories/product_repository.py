@@ -93,13 +93,9 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
             return None
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
-        """Lista produtos com JOIN na categoria."""
-        query = """
-            SELECT p.*, c.nome as categoria_nome 
-            FROM produtos p
-            LEFT JOIN categorias c ON p.categoria_id = c.id
-            ORDER BY p.nome
-        """
+        """Lista produtos usando a VIEW para trazer categoria e imagem principal."""
+        # CORREÇÃO: Usamos a view vw_produtos_completos
+        query = "SELECT * FROM vw_produtos_completos ORDER BY nome"
         
         params = []
         if limit is not None:

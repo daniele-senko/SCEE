@@ -1,8 +1,9 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from src.config.settings import Config
 from src.services.catalog_service import CatalogService
 from src.views.components.product_card import ProductCard
+from src.controllers.cart_controller import CartController
 
 class HomeView(tk.Frame):
     """
@@ -14,10 +15,14 @@ class HomeView(tk.Frame):
         self.controller = controller
         self.usuario = data # Usuário logado
         self.service = CatalogService()
+        self.cart_controller = CartController(controller)
+        if self.usuario:
+            self.cart_controller.set_current_user(self.usuario.id)
         
         self._setup_header()
-        self._setup_grid()
-        self._load_products()
+        self._setup_catalog_area()
+        # Carrega produtos após renderizar a tela para não travar
+        self.after(100, self._load_products)
 
     def _setup_header(self):
         # Barra Superior
@@ -28,79 +33,131 @@ class HomeView(tk.Frame):
         tk.Label(
             header, 
             text="SCEE Store", 
-            font=Config.FONT_HEADER, 
+            font=Config.FONT_TITLE, 
             bg=Config.COLOR_PRIMARY, 
             fg="white"
         ).pack(side="left")
 
-        # Menu Usuário
-        info_user = f"Olá, {self.usuario.nome.split()[0]}" if self.usuario else "Visitante"
-        tk.Label(header, text=info_user, bg=Config.COLOR_PRIMARY, fg="white").pack(side="right", padx=10)
+        # Container de botões do usuário
+        user_menu = tk.Frame(header, bg=Config.COLOR_PRIMARY)
+        user_menu.pack(side="right")
 
-        # Botão Sair
+        # Saudação
+        nome = self.usuario.nome.split()[0] if self.usuario else "Visitante"
+        tk.Label(
+            user_menu, 
+            text=f"Olá, {nome}", 
+            bg=Config.COLOR_PRIMARY, 
+            fg=Config.COLOR_ACCENT,
+            font=Config.FONT_BODY,
+            padx=10
+        ).pack(side="left")
+
+        # Botão Carrinho
         tk.Button(
-            header, 
-            text="Sair", 
-            bg=Config.COLOR_SECONDARY, 
+            user_menu,
+            text="🛒 Carrinho",
+            bg=Config.COLOR_ACCENT,
             fg="white",
-            font=Config.FONT_SMALL,
-            command=lambda: self.controller.show_view("LoginView")
-        ).pack(side="right")
+            relief="flat",
+            cursor="hand2",
+            padx=10,
+            command=lambda: self.controller.show_view("CartView", data=self.usuario)
+        ).pack(side="left", padx=5)
         
         # Botão Meus Pedidos
         tk.Button(
-            header,
-            text="Meus Pedidos",
-            bg=Config.COLOR_ACCENT,
+            user_menu,
+            text="📦 Meus Pedidos",
+            bg=Config.COLOR_PRIMARY,
             fg="white",
-            font=Config.FONT_SMALL,
+            relief="flat",
+            cursor="hand2",
+            padx=10,
             command=lambda: self.controller.show_view("MyOrdersView", data=self.usuario)
-        ).pack(side="right", padx=10)
-        
-        # Botão Carrinho
-        tk.Button(
-            header,
-            text="Carrinho",
-            bg=Config.COLOR_ACCENT,
-            fg="white",
-            font=Config.FONT_SMALL,
-            command=lambda: self.controller.show_view("CartView", data=self.usuario)
-        ).pack(side="right", padx=10)
+        ).pack(side="left", padx=5)
 
-    def _setup_grid(self):
-        """Área onde os produtos ficam (com scroll)."""
-        # Container principal com padding
-        self.main_container = tk.Frame(self, bg=Config.COLOR_BG, padx=20, pady=20)
-        self.main_container.pack(fill="both", expand=True)
-        
+        # Botão Sair
+        tk.Button(
+            user_menu, 
+            text="Sair", 
+            bg=Config.COLOR_SECONDARY, 
+            fg="white",
+            relief="flat",
+            cursor="hand2",
+            padx=10,
+            command=lambda: self.controller.show_view("LoginView")
+        ).pack(side="left", padx=5)
+
+    def _setup_catalog_area(self):
+        """Configura área de rolagem para os produtos."""
+        # Título da seção
         tk.Label(
-            self.main_container, 
+            self, 
             text="Produtos em Destaque", 
             font=Config.FONT_HEADER, 
-            bg=Config.COLOR_BG
-        ).pack(anchor="w", pady=(0, 20))
+            bg=Config.COLOR_BG,
+            fg=Config.COLOR_TEXT
+        ).pack(anchor="w", padx=30, pady=(20, 10))
 
-        # Frame para os cards (Grid)
-        self.grid_frame = tk.Frame(self.main_container, bg=Config.COLOR_BG)
-        self.grid_frame.pack(fill="both", expand=True)
+        # Container de Scroll
+        container = tk.Frame(self, bg=Config.COLOR_BG)
+        container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        self.canvas = tk.Canvas(container, bg=Config.COLOR_BG, highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.canvas.yview)
+        
+        self.grid_frame = tk.Frame(self.canvas, bg=Config.COLOR_BG)
+
+        # Configuração do Scroll
+        self.grid_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=self.grid_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        
+        # Scroll com o mouse
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def _load_products(self):
         try:
             produtos = self.service.listar_produtos()
             
+            # Limpa produtos antigos
+            for widget in self.grid_frame.winfo_children():
+                widget.destroy()
+
             if not produtos:
-                tk.Label(self.grid_frame, text="Nenhum produto disponível.", bg=Config.COLOR_BG).pack()
+                tk.Label(
+                    self.grid_frame, 
+                    text="Nenhum produto disponível no momento.", 
+                    bg=Config.COLOR_BG,
+                    font=Config.FONT_BODY,
+                    fg="gray"
+                ).pack(pady=50, padx=50)
                 return
 
-            # Lógica de Grid (Colunas e Linhas)
+            # Grid Responsivo (4 colunas)
             col = 0
             row = 0
-            MAX_COLS = 4 # Quantos produtos por linha
+            MAX_COLS = 4
             
             for prod in produtos:
-                # Cria o card passando a função de clique
-                card = ProductCard(self.grid_frame, prod, self._add_to_cart)
-                card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+                # Filtra apenas ativos
+                if isinstance(prod, dict) and not prod.get('ativo'): continue
+                if hasattr(prod, 'ativo') and not prod.ativo: continue
+
+                # Cria o card passando a função de adicionar ao carrinho
+                card = ProductCard(self.grid_frame, prod, on_add_cart=self._add_to_cart)
+                card.grid(row=row, column=col, padx=15, pady=15)
                 
                 col += 1
                 if col >= MAX_COLS:
@@ -108,23 +165,22 @@ class HomeView(tk.Frame):
                     row += 1
                     
         except Exception as e:
-            print(f"Erro ao carregar home: {e}")
+            print(f"Erro home: {e}")
             tk.Label(self.grid_frame, text="Erro ao carregar catálogo.", fg="red").pack()
 
     def _add_to_cart(self, produto):
-        """Callback quando clica em comprar no card."""
-        from src.controllers.cart_controller import CartController
-        
+        """Adiciona produto ao carrinho."""
         if not self.usuario:
-            messagebox.showwarning("Atenção", "Você precisa estar logado para adicionar ao carrinho!")
+            messagebox.showwarning("Atenção", "Faça login para comprar!")
             return
         
-        cart_controller = CartController(self.controller)
-        cart_controller.set_current_user(self.usuario.id)
+        # Pega ID independente se for Dict ou Objeto
+        prod_id = produto.get('id') if isinstance(produto, dict) else produto.id
+        nome_prod = produto.get('nome') if isinstance(produto, dict) else produto.nome
         
-        resultado = cart_controller.add_to_cart(produto.id, quantidade=1)
+        res = self.cart_controller.add_to_cart(prod_id, quantidade=1)
         
-        if resultado['success']:
-            messagebox.showinfo("Sucesso", f"{produto.nome} adicionado ao carrinho!")
+        if res['success']:
+            messagebox.showinfo("Sucesso", f"'{nome_prod}' adicionado ao carrinho!")
         else:
-            messagebox.showerror("Erro", resultado['message'])
+            messagebox.showerror("Erro", res['message'])
