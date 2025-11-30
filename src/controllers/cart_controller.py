@@ -199,14 +199,11 @@ class CartController(BaseController):
                 self.current_usuario_id
             )
             
-            print(f"DEBUG get_cart: Carrinho obtido = {carrinho}")
+            # CORREÇÃO: listar_itens() espera usuario_id, não carrinho_id
+            itens = self.cart_service.listar_itens(self.current_usuario_id)
             
-            itens = self.cart_service.listar_itens(carrinho['id'])
-            
-            print(f"DEBUG get_cart: Itens retornados = {itens}")
-            print(f"DEBUG get_cart: Quantidade de itens = {len(itens)}")
-            
-            total = self.cart_service.calcular_total(carrinho['id'])
+            # CORREÇÃO: calcular_total() também espera usuario_id
+            total = self.cart_service.calcular_total(self.current_usuario_id)
             
             # Estrutura corrigida para compatibilidade com a view
             cart_data = {
@@ -216,8 +213,6 @@ class CartController(BaseController):
                 'total': total,
                 'quantidade_itens': len(itens)
             }
-            
-            print(f"DEBUG get_cart: cart_data final = {cart_data}")
             
             return self._success_response(
                 f'{len(itens)} item(ns) no carrinho',
