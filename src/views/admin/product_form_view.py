@@ -121,6 +121,7 @@ class ProductFormView(tk.Frame):
                 
                 nomes.append(nome)
                 self.categorias_map[nome] = c_id # Guarda o ID para usar no save
+            
             print(f"--- DEBUG: Nomes carregados no Combo: {nomes}")
             self.combo_categoria['values'] = nomes
             
@@ -129,9 +130,35 @@ class ProductFormView(tk.Frame):
                 self._fill_form()
             elif nomes:
                 self.combo_categoria.current(0) # Seleciona o primeiro
-                self.combo_categoria.current(0) # Seleciona o primeiro
+                
+        except Exception as e:
+            print("❌ ERRO CRÍTICO AO CARREGAR CATEGORIAS:")
             traceback.print_exc() # Imprime o erro completo no terminal
             messagebox.showerror("Erro", f"Falha ao carregar categorias: {e}")
+    
+    def _fill_form(self):
+        """Preenche os campos do formulário com os dados do produto (modo edição)."""
+        if not self.produto:
+            return
+        
+        self.ent_nome.delete(0, tk.END)
+        self.ent_nome.insert(0, self.produto.nome)
+        
+        self.ent_sku.delete(0, tk.END)
+        self.ent_sku.insert(0, self.produto.sku)
+        
+        self.ent_preco.delete(0, tk.END)
+        self.ent_preco.insert(0, f"{self.produto.preco:.2f}")
+        
+        self.ent_estoque.delete(0, tk.END)
+        self.ent_estoque.insert(0, str(self.produto.estoque))
+        
+        # Seleciona a categoria correta
+        if self.produto.categoria:
+            cat_nome = self.produto.categoria.nome
+            if cat_nome in self.categorias_map:
+                idx = list(self.categorias_map.keys()).index(cat_nome)
+                self.combo_categoria.current(idx)
 
     def _handle_save(self):
         try:
