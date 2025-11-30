@@ -189,6 +189,48 @@ class StatCard(BaseCard):
         self._value_label = tk.Label(
             self,
             text=str(self._value),
+            font=('Arial', 28, 'bold'),
+            bg=self.bg_color,
+            fg=self._color
+        )
+        self._value_label.pack(anchor="w")
+        
+        # Label descritivo
+        self._desc_label = tk.Label(
+            self,
+            text=self._label,
+            font=Config.FONT_SMALL,
+            bg=self.bg_color,
+            fg=Config.COLOR_TEXT_LIGHT
+        )
+        self._desc_label.pack(anchor="w")
+    
+    def update_value(self, new_value: str):
+        """
+        Atualiza o valor exibido dinamicamente.
+        
+        Args:
+            new_value: Novo valor a ser exibido
+        """
+        self._value = new_value
+        if self._value_label:
+            self._value_label.config(text=str(new_value))
+    
+    def update_label(self, new_label: str):
+        """Atualiza o label descritivo."""
+        self._label = new_label
+        if self._desc_label:
+            self._desc_label.config(text=new_label)
+    
+    def set_color(self, color: str):
+        """Altera a cor do ícone e valor."""
+        self._color = color
+        if self._icon_label:
+            self._icon_label.config(fg=color)
+        if self._value_label:
+            self._value_label.config(fg=color)
+
+
 class InfoCard(BaseCard):
     """
     Card de informação com ícone, título e descrição.
@@ -298,6 +340,19 @@ class InfoCard(BaseCard):
             self._title_label.config(text=new_title)
     
     def update_description(self, new_description: str):
+        """Atualiza a descrição."""
+        self._description = new_description
+        if self._desc_label:
+            self._desc_label.config(text=new_description)
+    
+    def set_click_handler(self, callback: Callable):
+        """Define ou altera o handler de clique."""
+        self._on_click = callback
+        if not self._clickable:
+            self._clickable = True
+            self._make_clickable()
+
+
 class CollapsibleCard(BaseCard):
     """
     Card expansível/colapsável.
@@ -432,42 +487,7 @@ class CollapsibleCard(BaseCard):
         # Reconstrói header
         if self._header:
             self._header.destroy()
-            self._header = self._create_header()sor='hand2')
-        header.pack(fill="x")
-        header.bind('<Button-1>', self.toggle)
-        
-        # Ícone expansão
-        self.expand_icon = tk.Label(
-            header,
-            text="▶",
-            font=Config.FONT_BODY,
-            bg=Config.COLOR_BG,
-            fg=Config.COLOR_TEXT
-        )
-        self.expand_icon.pack(side="left", padx=10, pady=10)
-        self.expand_icon.bind('<Button-1>', self.toggle)
-        
-        # Título
-        title_label = tk.Label(
-            header,
-            text=title,
-            font=Config.FONT_BODY,
-            bg=Config.COLOR_BG,
-            fg=Config.COLOR_TEXT
-        )
-        title_label.pack(side="left", fill="x", expand=True, pady=10)
-        title_label.bind('<Button-1>', self.toggle)
-        
-        # Container de conteúdo (inicialmente oculto)
-        self.content = tk.Frame(self, bg=Config.COLOR_WHITE, padx=20, pady=10)
-        
-        # Adiciona widgets se fornecidos
-        if content_widgets:
-            for widget in content_widgets:
-                widget.pack(in_=self.content, fill="x", pady=5)
-    
-    def toggle(self, event=None):
-        """Alterna entre expandido/colapsado."""
+            self._header = self._create_header()
         if self.is_expanded:
             self.collapse()
         else:
