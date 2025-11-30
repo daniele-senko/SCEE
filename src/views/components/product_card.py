@@ -6,10 +6,11 @@ class ProductCard(tk.Frame):
     Componente visual reutilizável que representa um produto na vitrine.
     """
 
-    def __init__(self, parent, produto, on_add_click):
+    def __init__(self, parent, produto, on_add_click, on_details_click=None):
         super().__init__(parent, bg=Config.COLOR_WHITE, bd=1, relief="solid")
         self.produto = produto
         self.on_add_click = on_add_click
+        self.on_details_click = on_details_click
         
         self._setup_ui()
 
@@ -63,7 +64,20 @@ class ProductCard(tk.Frame):
             fg=cor_estoque
         ).pack(anchor="w", pady=(0, 10))
 
-        # 5. Botão Comprar
+        # 5. Botão Ver Detalhes (se callback fornecido)
+        if self.on_details_click:
+            tk.Button(
+                container,
+                text="Ver Detalhes",
+                bg=Config.COLOR_ACCENT,
+                fg="white",
+                font=Config.FONT_SMALL,
+                cursor="hand2",
+                bd=0,
+                command=lambda: self.on_details_click(self.produto)
+            ).pack(fill="x", pady=(0, 5))
+        
+        # 6. Botão Comprar
         state = "normal"
         bg_btn = Config.COLOR_PRIMARY
         text_btn = "Adicionar ao Carrinho"

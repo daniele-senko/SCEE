@@ -98,8 +98,13 @@ class HomeView(tk.Frame):
             MAX_COLS = 4 # Quantos produtos por linha
             
             for prod in produtos:
-                # Cria o card passando a função de clique
-                card = ProductCard(self.grid_frame, prod, self._add_to_cart)
+                # Cria o card passando a função de clique e callback de detalhes
+                card = ProductCard(
+                    self.grid_frame, 
+                    prod, 
+                    self._add_to_cart,
+                    on_details_click=self._view_product_details
+                )
                 card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
                 
                 col += 1
@@ -128,3 +133,13 @@ class HomeView(tk.Frame):
             messagebox.showinfo("Sucesso", f"{produto.nome} adicionado ao carrinho!")
         else:
             messagebox.showerror("Erro", resultado['message'])
+    
+    def _view_product_details(self, produto):
+        """Navega para a tela de detalhes do produto."""
+        self.controller.show_view(
+            "ProductDetailView",
+            data={
+                'produto_id': produto.id,
+                'usuario': self.usuario
+            }
+        )

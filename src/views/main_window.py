@@ -73,6 +73,26 @@ class MainWindow(tk.Tk):
         elif view_name == "MyOrdersView":
             from src.views.client.my_orders_view import MyOrdersView
             self.current_view = MyOrdersView(self.container, self, data=data)
+        
+        elif view_name == "ProductDetailView":
+            from src.views.client.product_detail_view import ProductDetailView
+            # data deve conter: produto_id e usuario
+            produto_id = data.get('produto_id') if isinstance(data, dict) else None
+            usuario = data.get('usuario') if isinstance(data, dict) else None
+            
+            if produto_id:
+                self.current_view = ProductDetailView(
+                    self.container,
+                    self,
+                    produto_id=produto_id,
+                    usuario_logado=usuario,
+                    on_back=lambda: self.show_view("HomeView", data=usuario)
+                )
+            else:
+                self.current_view = tk.Label(
+                    self.container,
+                    text="Erro: ID do produto não fornecido"
+                )
             
         else:
             self.current_view = tk.Label(self.container, text=f"404 - Tela {view_name} não encontrada")
