@@ -12,6 +12,7 @@ class ManageProductsView(tk.Frame):
     def __init__(self, parent, controller, data=None):
         super().__init__(parent, bg=Config.COLOR_BG)
         self.controller = controller
+        self.usuario = data  # Guarda o usuário logado
         self.service = CatalogService()
         
         self._setup_ui()
@@ -35,7 +36,7 @@ class ManageProductsView(tk.Frame):
         tk.Button(
             header, 
             text="Voltar", 
-            command=lambda: self.controller.show_view("AdminDashboard"),
+            command=lambda: self.controller.show_view("AdminDashboard", data=self.usuario),
             bg=Config.COLOR_BG
         ).pack(side="right")
 
@@ -120,7 +121,7 @@ class ManageProductsView(tk.Frame):
 
     def _open_add_form(self):
         """Navega para a tela de formulário."""
-        self.controller.show_view("ProductFormView")
+        self.controller.show_view("ProductFormView", data=self.usuario)
 
     def _delete_selected(self):
         """Remove o item selecionado."""

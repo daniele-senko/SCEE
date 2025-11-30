@@ -52,11 +52,11 @@ class MainWindow(tk.Tk):
 
         elif view_name == "ManageProducts":
             from src.views.admin.manage_products_view import ManageProductsView
-            self.current_view = ManageProductsView(self.container, self)
+            self.current_view = ManageProductsView(self.container, self, data=data)
 
         elif view_name == "ProductFormView":
             from src.views.admin.product_form_view import ProductFormView
-            self.current_view = ProductFormView(self.container, self)
+            self.current_view = ProductFormView(self.container, self, data=data)
         
         elif view_name == "CartView":
             from src.views.client.cart_view import CartView

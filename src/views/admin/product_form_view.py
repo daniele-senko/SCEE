@@ -12,6 +12,7 @@ class ProductFormView(tk.Frame):
     def __init__(self, parent, controller, data=None):
         super().__init__(parent, bg=Config.COLOR_BG)
         self.controller = controller
+        self.usuario = data  # Guarda o usuário logado
         self.service = CatalogService()
         self.categorias_map = {} # Dicionário para guardar {Nome: ID}
         
@@ -61,7 +62,7 @@ class ProductFormView(tk.Frame):
             bg=Config.COLOR_SECONDARY, 
             fg="white",
             width=12,
-            command=lambda: self.controller.show_view("ManageProducts")
+            command=lambda: self.controller.show_view("ManageProducts", data=self.usuario)
         ).pack(side="left")
 
         # Botão Salvar
@@ -145,7 +146,7 @@ class ProductFormView(tk.Frame):
             self.service.cadastrar_produto(nome, sku, preco, estoque, cat_nome)
             
             messagebox.showinfo("Sucesso", "Produto cadastrado!")
-            self.controller.show_view("ManageProducts")
+            self.controller.show_view("ManageProducts", data=self.usuario)
             
         except ValueError as ve:
             messagebox.showwarning("Validação", str(ve))
