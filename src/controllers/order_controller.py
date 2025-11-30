@@ -151,7 +151,8 @@ class OrderController(BaseController):
             return self._error_response('Usuário não autenticado')
         
         try:
-            pedido = self.order_service.obter_detalhes_pedido(pedido_id)
+            # Buscar pedido completo com todos os detalhes
+            pedido = self.order_service.buscar_por_id(pedido_id, completo=True)
             
             if not pedido:
                 return self._error_response('Pedido não encontrado')

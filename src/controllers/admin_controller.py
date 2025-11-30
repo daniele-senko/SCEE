@@ -32,8 +32,9 @@ class AdminController(BaseController):
         self.catalog_service = CatalogService()
         self.product_repo = ProductRepository()
         self.category_repo = CategoriaRepository()
+        self.order_repo = PedidoRepository()
         self.order_service = PedidoService(
-            PedidoRepository(),
+            self.order_repo,
             ProductRepository(),
             UsuarioRepository()
         )
@@ -205,14 +206,13 @@ class AdminController(BaseController):
         
         try:
             if status:
-                pedidos = self.order_service.listar_por_status(
+                pedidos = self.order_service.listar_pedidos_por_status(
                     status,
                     limit=limit
                 )
             else:
-                pedidos = self.order_service.listar_todos_pedidos(
-                    limit=limit
-                )
+                # Listar todos os pedidos usando repository diretamente
+                pedidos = self.order_repo.listar_todos(limit=limit)
             
             return self._success_response(
                 f'{len(pedidos)} pedido(s) encontrado(s)',
@@ -274,10 +274,10 @@ class AdminController(BaseController):
             stats = {
                 'total_produtos': len(self.catalog_service.listar_produtos()),
                 'total_categorias': len(self.catalog_service.listar_categorias()),
-                'pedidos_pendentes': self.order_service.contar_por_status('PENDENTE'),
-                'pedidos_processando': self.order_service.contar_por_status('PROCESSANDO'),
-                'pedidos_enviados': self.order_service.contar_por_status('ENVIADO'),
-                'total_vendas': self.order_service.calcular_total_vendas()
+                'pedidos_pendentes': self.order_repo.contar_por_status('PENDENTE'),
+                'pedidos_processando': self.order_repo.contar_por_status('PROCESSANDO'),
+                'pedidos_enviados': self.order_repo.contar_por_status('ENVIADO'),
+                'total_vendas': self.order_repo.calcular_total_vendas()
             }
             
             return self._success_response(

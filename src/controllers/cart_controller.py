@@ -140,7 +140,8 @@ class CartController(BaseController):
             return self.remove_from_cart(item_id)
         
         try:
-            self.cart_service.atualizar_quantidade_item(
+            self.cart_service.atualizar_quantidade(
+                self.current_usuario_id,
                 item_id,
                 nova_quantidade
             )
