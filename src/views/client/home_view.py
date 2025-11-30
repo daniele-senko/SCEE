@@ -119,10 +119,14 @@ class HomeView(tk.Frame):
             messagebox.showwarning("Atenção", "Você precisa estar logado para adicionar ao carrinho!")
             return
         
+        print(f"DEBUG: Adicionando produto {produto.nome} (ID: {produto.id}) ao carrinho do usuário {self.usuario.id}")
+        
         cart_controller = CartController(self.controller)
         cart_controller.set_current_user(self.usuario.id)
         
         resultado = cart_controller.add_to_cart(produto.id, quantidade=1)
+        
+        print(f"DEBUG: Resultado = {resultado}")
         
         if resultado['success']:
             messagebox.showinfo("Sucesso", f"{produto.nome} adicionado ao carrinho!")

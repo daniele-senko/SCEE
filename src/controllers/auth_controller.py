@@ -101,7 +101,8 @@ class AuthController(BaseController):
         email: str,
         cpf: str,
         senha: str,
-        confirmar_senha: str
+        confirmar_senha: str = None,
+        telefone: str = None
     ) -> Dict[str, Any]:
         """
         Registra novo cliente.
@@ -111,7 +112,8 @@ class AuthController(BaseController):
             email: Email
             cpf: CPF (apenas números)
             senha: Senha
-            confirmar_senha: Confirmação de senha
+            confirmar_senha: Confirmação de senha (opcional se não fornecida)
+            telefone: Telefone do cliente (opcional)
             
         Returns:
             Dicionário com success, message e data (cliente)
@@ -121,9 +123,11 @@ class AuthController(BaseController):
             (nome, "Nome"),
             (email, "Email"),
             (cpf, "CPF"),
-            (senha, "Senha"),
-            (confirmar_senha, "Confirmação de senha")
+            (senha, "Senha")
         ]
+        
+        if confirmar_senha:
+            validations.append((confirmar_senha, "Confirmação de senha"))
         
         for value, field in validations:
             error = self._validate_not_empty(value, field)
@@ -148,8 +152,8 @@ class AuthController(BaseController):
         if error:
             return self._error_response(error)
         
-        # Validar confirmação de senha
-        if senha != confirmar_senha:
+        # Validar confirmação de senha (se fornecida)
+        if confirmar_senha and senha != confirmar_senha:
             return self._error_response("Senhas não coincidem")
         
         # Verificar se email já existe
@@ -163,6 +167,8 @@ class AuthController(BaseController):
         # Criar novo cliente
         try:
             senha_hash = PasswordHasher.hash_password(senha)
+            # Nota: O modelo Cliente atualmente não suporta telefone
+            # Telefone pode ser adicionado futuramente como campo opcional
             cliente = Cliente(nome, email, cpf, senha_hash)
             
             # Salvar no banco

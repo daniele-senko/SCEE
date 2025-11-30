@@ -77,10 +77,10 @@ class RegisterView(tk.Frame):
         # Campo Telefone
         tk.Label(
             card, 
-            text="Telefone (DDD + número)", 
+            text="Telefone (opcional - em desenvolvimento)", 
             font=Config.FONT_BODY, 
             bg=Config.COLOR_WHITE, 
-            fg=Config.COLOR_TEXT
+            fg=Config.COLOR_TEXT_LIGHT
         ).pack(anchor="w")
         self.entry_telefone = tk.Entry(card, font=Config.FONT_BODY, width=35)
         self.entry_telefone.pack(pady=(0, 10))
@@ -144,8 +144,8 @@ class RegisterView(tk.Frame):
         confirma_senha = self.entry_confirma_senha.get()
 
         # Validações básicas no frontend
-        if not nome or not email or not cpf or not telefone or not senha:
-            messagebox.showwarning("Atenção", "Preencha todos os campos!")
+        if not nome or not email or not cpf or not senha:
+            messagebox.showwarning("Atenção", "Preencha os campos obrigatórios (nome, email, CPF e senha)!")
             return
 
         if len(senha) < 6:
@@ -156,9 +156,8 @@ class RegisterView(tk.Frame):
             messagebox.showerror("Erro", "As senhas não conferem!")
             return
 
-        # Remove caracteres especiais do CPF e telefone
+        # Remove caracteres especiais do CPF
         cpf_numeros = ''.join(filter(str.isdigit, cpf))
-        telefone_numeros = ''.join(filter(str.isdigit, telefone))
 
         if len(cpf_numeros) != 11:
             messagebox.showwarning("Atenção", "CPF deve conter 11 dígitos!")
@@ -169,8 +168,9 @@ class RegisterView(tk.Frame):
             nome=nome,
             email=email,
             cpf=cpf_numeros,
-            telefone=telefone_numeros,
-            senha=senha
+            senha=senha,
+            confirmar_senha=confirma_senha
+            # Nota: telefone não é usado no momento pois o modelo Cliente não suporta
         )
 
         # Processa a resposta
