@@ -4,7 +4,7 @@ from src.repositories.base_repository import BaseRepository
 from src.models.products.product_model import Produto
 
 class ProductRepository(BaseRepository[Dict[str, Any]]):
-    """Repositório de produtos com operações CRUD e gerenciamento de imagens."""
+    """Repositório de produtos com operações CRUD, imagens e suporte a transações."""
     
     def __init__(self):
         super().__init__()
@@ -112,8 +112,6 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
-            # Na listagem geral, optamos por não carregar as imagens de todos 
-            # para manter a performance (Lazy Loading), ou carregamos apenas a principal se necessário.
             return [dict(row) for row in rows]
     
     def atualizar(self, obj_entrada: Union[Produto, Dict]) -> Dict[str, Any]:
@@ -151,7 +149,6 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
     
     def deletar(self, id: int) -> bool:
         """Deleta um produto por ID."""
-        # O banco já tem ON DELETE CASCADE, então as imagens somem do DB automaticamente.
         query = "DELETE FROM produtos WHERE id = ?"
         
         with self._conn_factory() as conn:
@@ -159,3 +156,25 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
             cursor.execute(query, (id,))
             conn.commit()
             return cursor.rowcount > 0
+
+    def buscar_por_id_para_bloqueio(self, id: int, conexao) -> Dict[str, Any]:
+        """
+        Busca produto usando uma conexão existente (dentro da transação).
+        Isso garante que o Checkout veja o estado do produto dentro da mesma operação.
+        """
+        query = "SELECT * FROM produtos WHERE id = ?"
+        cursor = conexao.cursor()
+        cursor.execute(query, (id,))
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"Produto {id} não encontrado durante checkout.")
+        return dict(row)
+
+    def atualizar_estoque(self, id: int, novo_estoque: int, conexao) -> None:
+        """
+        Atualiza apenas o estoque usando uma conexão existente.
+        Permite que o CheckoutService controle o commit/rollback.
+        """
+        query = "UPDATE produtos SET estoque = ? WHERE id = ?"
+        cursor = conexao.cursor()
+        cursor.execute(query, (novo_estoque, id))

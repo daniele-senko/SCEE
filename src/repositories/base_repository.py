@@ -10,12 +10,7 @@ class BaseRepository(ABC, Generic[T]):
     """
     
     def __init__(self):
-        # 1. Cria a conexão do jeito novo
         self.db = DatabaseConnection()
-        
-        # 2. --- HACK DE COMPATIBILIDADE ---
-        # Cria um apelido para que o código do seu amigo (que chama _conn_factory)
-        # seja redirecionado para a função certa (get_connection).
         self._conn_factory = self.db.get_connection
 
     @abstractmethod
@@ -33,3 +28,25 @@ class BaseRepository(ABC, Generic[T]):
     @abstractmethod
     def deletar(self, id: int) -> bool:
         pass
+
+    # --- MÉTODOS DE TRANSAÇÃO CORRIGIDOS ---
+    # Removemos o .close() para não matar a conexão compartilhada da aplicação.
+    
+    def iniciar_transacao(self):
+        """Retorna a conexão para controle manual."""
+        return self._conn_factory()
+
+    def commit_transacao(self, conexao):
+        """Confirma as alterações."""
+        if conexao:
+            conexao.commit()
+            # conexao.close()  <-- REMOVIDO: Não feche a conexão se ela for compartilhada!
+
+    def rollback_transacao(self, conexao):
+        """Reverte as alterações."""
+        if conexao:
+            try:
+                conexao.rollback()
+            except Exception:
+                pass
+            # conexao.close()  <-- REMOVIDO
