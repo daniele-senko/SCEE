@@ -45,6 +45,7 @@ class DashboardView(tk.Frame):
 
         # Botões de Navegação (Estilo Flat)
         self._create_nav_button(sidebar, "Gerenciar Produtos", "ManageProducts")
+        self._create_nav_button(sidebar, "Gerenciar Categorias", "ManageCategories")
         self._create_nav_button(sidebar, "Ver Pedidos", "ManageOrders")
         self._create_nav_button(sidebar, "Sair / Logout", "Logout", color=Config.COLOR_SECONDARY)
 
@@ -109,6 +110,10 @@ class DashboardView(tk.Frame):
         elif action == "ManageProducts":
             # Vai para a lista de produtos
             self.controller.show_view("ManageProducts", data=self.usuario)
+        
+        elif action == "ManageCategories":
+            # Vai para gerenciamento de categorias
+            self.controller.show_view("ManageCategories", data=self.usuario)
             
         elif action == "ManageOrders":
             # Vai para lista de pedidos

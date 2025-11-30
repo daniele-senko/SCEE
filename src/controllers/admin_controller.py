@@ -313,3 +313,167 @@ class AdminController(BaseController):
     def navigate_to_dashboard(self) -> None:
         """Navega para dashboard admin."""
         self.navigate_to('AdminDashboard')
+    
+    # ==================== MÉTODOS DE CATEGORIAS ====================
+    
+    def list_all_categories(self) -> Dict[str, Any]:
+        """
+        Lista todas as categorias (ativas e inativas).
+        
+        Returns:
+            Dicionário com success, message e data (lista de categorias)
+        """
+        try:
+            categorias = self.category_repo.listar()
+            
+            return self._success_response(
+                f'{len(categorias)} categoria(s) encontrada(s)',
+                categorias
+            )
+        
+        except Exception as e:
+            return self._error_response(
+                'Erro ao listar categorias',
+                e
+            )
+    
+    def add_category(self, nome: str, descricao: str = None) -> Dict[str, Any]:
+        """
+        Adiciona uma nova categoria.
+        
+        Args:
+            nome: Nome da categoria
+            descricao: Descrição (opcional)
+            
+        Returns:
+            Dicionário com success, message e data
+        """
+        # Validações
+        error = self._validate_not_empty(nome, 'Nome da categoria')
+        if error:
+            return error
+        
+        if len(nome) < 3:
+            return self._error_response('Nome deve ter no mínimo 3 caracteres')
+        
+        try:
+            # Verificar se já existe
+            categorias = self.category_repo.buscar_por_nome(nome)
+            if categorias:
+                return self._error_response('Já existe uma categoria com este nome')
+            
+            # Criar categoria
+            categoria_data = {
+                'nome': nome.strip(),
+                'descricao': descricao.strip() if descricao else None,
+                'ativo': 1
+            }
+            
+            categoria = self.category_repo.salvar(categoria_data)
+            
+            return self._success_response(
+                'Categoria criada com sucesso',
+                categoria
+            )
+        
+        except Exception as e:
+            return self._error_response(
+                'Erro ao criar categoria',
+                e
+            )
+    
+    def update_category(
+        self,
+        categoria_id: int,
+        nome: str,
+        descricao: str = None
+    ) -> Dict[str, Any]:
+        """
+        Atualiza uma categoria existente.
+        
+        Args:
+            categoria_id: ID da categoria
+            nome: Novo nome
+            descricao: Nova descrição (opcional)
+            
+        Returns:
+            Dicionário com success, message e data
+        """
+        # Validações
+        error = self._validate_not_empty(nome, 'Nome da categoria')
+        if error:
+            return error
+        
+        if len(nome) < 3:
+            return self._error_response('Nome deve ter no mínimo 3 caracteres')
+        
+        try:
+            # Verificar se categoria existe
+            categoria = self.category_repo.buscar_por_id(categoria_id)
+            if not categoria:
+                return self._error_response('Categoria não encontrada')
+            
+            # Verificar se nome já existe em outra categoria
+            categorias_mesmo_nome = self.category_repo.buscar_por_nome(nome)
+            if categorias_mesmo_nome and categorias_mesmo_nome[0]['id'] != categoria_id:
+                return self._error_response('Já existe outra categoria com este nome')
+            
+            # Atualizar
+            categoria_data = {
+                'id': categoria_id,
+                'nome': nome.strip(),
+                'descricao': descricao.strip() if descricao else None,
+                'ativo': categoria.get('ativo', 1)
+            }
+            
+            categoria_atualizada = self.category_repo.atualizar(categoria_data)
+            
+            return self._success_response(
+                'Categoria atualizada com sucesso',
+                categoria_atualizada
+            )
+        
+        except Exception as e:
+            return self._error_response(
+                'Erro ao atualizar categoria',
+                e
+            )
+    
+    def toggle_category(self, categoria_id: int, ativo: bool) -> Dict[str, Any]:
+        """
+        Ativa ou desativa uma categoria.
+        
+        Args:
+            categoria_id: ID da categoria
+            ativo: True para ativar, False para desativar
+            
+        Returns:
+            Dicionário com success, message e data
+        """
+        try:
+            # Verificar se categoria existe
+            categoria = self.category_repo.buscar_por_id(categoria_id)
+            if not categoria:
+                return self._error_response('Categoria não encontrada')
+            
+            # Atualizar status
+            categoria_data = {
+                'id': categoria_id,
+                'nome': categoria['nome'],
+                'descricao': categoria.get('descricao'),
+                'ativo': 1 if ativo else 0
+            }
+            
+            categoria_atualizada = self.category_repo.atualizar(categoria_data)
+            
+            acao = 'ativada' if ativo else 'desativada'
+            return self._success_response(
+                f'Categoria {acao} com sucesso',
+                categoria_atualizada
+            )
+        
+        except Exception as e:
+            return self._error_response(
+                'Erro ao alterar status da categoria',
+                e
+            )
