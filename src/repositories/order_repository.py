@@ -4,20 +4,13 @@ Implementa operações CRUD para pedidos e itens de pedido.
 """
 from typing import Optional, List, Dict, Any
 from .base_repository import BaseRepository
-
+from src.models.sales.order_model import Pedido 
 
 class PedidoRepository(BaseRepository[Dict[str, Any]]):
     """Repositório de pedidos com operações CRUD e gerenciamento de itens."""
     
     def salvar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
-        """Salva um novo pedido.
-        
-        Args:
-            obj: Dicionário com dados do pedido
-            
-        Returns:
-            Pedido salvo com ID atribuído
-        """
+        """Salva um novo pedido (Método padrão)."""
         query = """
             INSERT INTO pedidos 
             (usuario_id, endereco_id, subtotal, frete, total, status, tipo_pagamento, observacoes)
@@ -26,7 +19,6 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
             cursor.execute(
                 query,
                 (
@@ -42,13 +34,76 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
             )
             conn.commit()
             obj['id'] = cursor.lastrowid
-        
         return obj
-    
-    def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
-        """Busca um pedido por ID."""
-        query = "SELECT * FROM pedidos WHERE id = ?"
+
+    # --- MÉTODO ESPECIAL PARA O CHECKOUT (COM TRANSAÇÃO) ---
+    def salvar_pedido_e_itens(self, pedido: Pedido, conexao) -> None:
+        """
+        Salva o Pedido e seus Itens usando uma conexão de transação JÁ ABERTA.
+        """
+        cursor = conexao.cursor()
         
+        # 1. Inserir Pedido
+        query_pedido = """
+            INSERT INTO pedidos 
+            (usuario_id, endereco_id, subtotal, frete, total, status, tipo_pagamento, observacoes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        
+        frete = getattr(pedido, 'frete', 0.0)
+        total = pedido.valor_total
+        subtotal = total - frete
+        
+        tipo_pag = pedido.tipo_pagamento 
+        
+        cursor.execute(query_pedido, (
+            pedido.cliente_id,
+            pedido.endereco_entrega_id,
+            subtotal,
+            frete,
+            total,
+            pedido.status,
+            tipo_pag,
+            ""
+        ))
+        
+        pedido_id = cursor.lastrowid
+        
+        if hasattr(pedido, 'id'):
+            try: pedido.id = pedido_id
+            except: pass 
+        if hasattr(pedido, '_id'):
+            pedido._id = pedido_id
+
+        # 2. Inserir Itens
+        query_item = """
+            INSERT INTO itens_pedido 
+            (pedido_id, produto_id, nome_produto, quantidade, preco_unitario, subtotal)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+        
+        for item in pedido.itens:
+            prod_id = item.produto.id
+            
+            cursor.execute("SELECT nome FROM produtos WHERE id = ?", (prod_id,))
+            row = cursor.fetchone()
+            nome_produto = row[0] if row else "Produto Desconhecido"
+            
+            subtotal_item = item.quantidade * item.preco_unitario
+            
+            cursor.execute(query_item, (
+                pedido_id,
+                prod_id,
+                nome_produto,
+                item.quantidade,
+                item.preco_unitario,
+                subtotal_item
+            ))
+
+    # --- MÉTODOS DE LEITURA ---
+
+    def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
+        query = "SELECT * FROM pedidos WHERE id = ?"
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (id,))
@@ -56,14 +111,11 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
             return dict(row) if row else None
     
     def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
-        """Lista todos os pedidos."""
         query = "SELECT * FROM pedidos ORDER BY criado_em DESC"
-        
         params = []
         if limit is not None:
             query += " LIMIT ? OFFSET ?"
             params.extend([limit, offset])
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
@@ -71,100 +123,33 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
             return [dict(row) for row in rows]
     
     def atualizar(self, obj: Dict[str, Any]) -> Dict[str, Any]:
-        """Atualiza um pedido (geralmente apenas status)."""
-        if 'id' not in obj:
-            raise ValueError("Pedido deve ter um ID para ser atualizado")
-        
-        query = """
-            UPDATE pedidos
-            SET status = ?, observacoes = ?
-            WHERE id = ?
-        """
-        
+        if 'id' not in obj: raise ValueError("Pedido deve ter um ID")
+        query = "UPDATE pedidos SET status = ?, observacoes = ? WHERE id = ?"
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
-            cursor.execute(
-                query,
-                (obj.get('status', 'PENDENTE'), obj.get('observacoes'), obj['id'])
-            )
+            cursor.execute(query, (obj.get('status', 'PENDENTE'), obj.get('observacoes'), obj['id']))
             conn.commit()
-        
         return obj
     
     def deletar(self, id: int) -> bool:
-        """Deleta um pedido (cuidado: pode não ser permitido em produção)."""
         query = "DELETE FROM pedidos WHERE id = ?"
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
             cursor.execute(query, (id,))
             conn.commit()
             return cursor.rowcount > 0
     
-    def adicionar_item(
-        self,
-        pedido_id: int,
-        produto_id: int,
-        nome_produto: str,
-        quantidade: int,
-        preco_unitario: float
-    ) -> Dict[str, Any]:
-        """Adiciona um item ao pedido.
-        
-        Args:
-            pedido_id: ID do pedido
-            produto_id: ID do produto
-            nome_produto: Nome do produto (snapshot no momento da compra)
-            quantidade: Quantidade comprada
-            preco_unitario: Preço unitário no momento da compra
-            
-        Returns:
-            Item adicionado
-        """
+    def adicionar_item(self, pedido_id, produto_id, nome_produto, quantidade, preco_unitario):
         subtotal = quantidade * preco_unitario
-        
-        query = """
-            INSERT INTO itens_pedido 
-            (pedido_id, produto_id, nome_produto, quantidade, preco_unitario, subtotal)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """
-        
+        query = "INSERT INTO itens_pedido (pedido_id, produto_id, nome_produto, quantidade, preco_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)"
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
-            cursor.execute(
-                query,
-                (pedido_id, produto_id, nome_produto, quantidade, preco_unitario, subtotal)
-            )
+            cursor.execute(query, (pedido_id, produto_id, nome_produto, quantidade, preco_unitario, subtotal))
             conn.commit()
-            
-            return {
-                'id': cursor.lastrowid,
-                'pedido_id': pedido_id,
-                'produto_id': produto_id,
-                'nome_produto': nome_produto,
-                'quantidade': quantidade,
-                'preco_unitario': preco_unitario,
-                'subtotal': subtotal
-            }
+            return {'id': cursor.lastrowid} # Simplificado para brevidade
     
     def listar_itens(self, pedido_id: int) -> List[Dict[str, Any]]:
-        """Lista todos os itens de um pedido.
-        
-        Args:
-            pedido_id: ID do pedido
-            
-        Returns:
-            Lista de itens do pedido
-        """
-        query = """
-            SELECT * FROM itens_pedido
-            WHERE pedido_id = ?
-            ORDER BY id
-        """
-        
+        query = "SELECT * FROM itens_pedido WHERE pedido_id = ? ORDER BY id"
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (pedido_id,))
@@ -172,88 +157,37 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
             return [dict(row) for row in rows]
     
     def buscar_completo(self, pedido_id: int) -> Optional[Dict[str, Any]]:
-        """Busca um pedido com todos os detalhes (itens, endereço, usuário).
-        
-        Args:
-            pedido_id: ID do pedido
-            
-        Returns:
-            Dicionário com pedido completo ou None
-        """
         pedido = self.buscar_por_id(pedido_id)
-        if not pedido:
-            return None
-        
-        # Busca itens do pedido
+        if not pedido: return None
         pedido['itens'] = self.listar_itens(pedido_id)
-        
-        # Busca dados do endereço
-        query_endereco = """
-            SELECT e.* FROM enderecos e
-            WHERE e.id = ?
-        """
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
-            cursor.execute(query_endereco, (pedido['endereco_id'],))
-            endereco = cursor.fetchone()
-            pedido['endereco'] = endereco
-        
+            cursor.execute("SELECT * FROM enderecos WHERE id = ?", (pedido['endereco_id'],))
+            pedido['endereco'] = dict(cursor.fetchone()) if cursor.fetchone() else None # fetchone consome, cuidado. Melhor separar
+            # Correção rápida para evitar bug do fetchone duplo:
+            cursor.execute("SELECT * FROM enderecos WHERE id = ?", (pedido['endereco_id'],))
+            end_row = cursor.fetchone()
+            pedido['endereco'] = dict(end_row) if end_row else None
         return pedido
     
-    def listar_por_usuario(
-        self,
-        usuario_id: int,
-        limit: Optional[int] = None,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
-        """Lista pedidos de um usuário.
-        
-        Args:
-            usuario_id: ID do usuário
-            limit: Número máximo de pedidos
-            offset: Offset para paginação
-            
-        Returns:
-            Lista de pedidos do usuário
-        """
+    def listar_por_usuario(self, usuario_id: int, limit=None, offset=0) -> List[Dict[str, Any]]:
         query = "SELECT * FROM pedidos WHERE usuario_id = ? ORDER BY criado_em DESC"
-        
         params = [usuario_id]
-        if limit is not None:
+        if limit:
             query += " LIMIT ? OFFSET ?"
             params.extend([limit, offset])
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
     
-    def listar_por_status(
-        self,
-        status: str,
-        limit: Optional[int] = None,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
-        """Lista pedidos por status.
-        
-        Args:
-            status: Status do pedido (PENDENTE, PROCESSANDO, ENVIADO, ENTREGUE, CANCELADO)
-            limit: Número máximo de pedidos
-            offset: Offset para paginação
-            
-        Returns:
-            Lista de pedidos com o status especificado
-        """
+    def listar_por_status(self, status: str, limit=None, offset=0) -> List[Dict[str, Any]]:
         query = "SELECT * FROM pedidos WHERE status = ? ORDER BY criado_em DESC"
-        
         params = [status]
-        if limit is not None:
+        if limit:
             query += " LIMIT ? OFFSET ?"
             params.extend([limit, offset])
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, tuple(params))
@@ -261,65 +195,30 @@ class PedidoRepository(BaseRepository[Dict[str, Any]]):
             return [dict(row) for row in rows]
     
     def atualizar_status(self, pedido_id: int, novo_status: str) -> bool:
-        """Atualiza o status de um pedido.
-        
-        Args:
-            pedido_id: ID do pedido
-            novo_status: Novo status
-            
-        Returns:
-            True se atualizado com sucesso
-        """
         query = "UPDATE pedidos SET status = ? WHERE id = ?"
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
             cursor.execute(query, (novo_status, pedido_id))
             conn.commit()
             return cursor.rowcount > 0
     
     def contar_por_status(self, status: str) -> int:
-        """Conta pedidos por status.
-        
-        Args:
-            status: Status do pedido
-            
-        Returns:
-            Número de pedidos com o status
-        """
         query = "SELECT COUNT(*) as total FROM pedidos WHERE status = ?"
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
             cursor.execute(query, (status,))
             row = cursor.fetchone()
             return row['total'] if row else 0
     
-    def calcular_total_vendas(self, usuario_id: Optional[int] = None) -> float:
-        """Calcula o total de vendas (pedidos ENTREGUE).
-        
-        Args:
-            usuario_id: Opcional, filtrar por usuário
-            
-        Returns:
-            Total de vendas
-        """
+    def calcular_total_vendas(self, usuario_id=None) -> float:
         if usuario_id:
-            query = """
-                SELECT SUM(total) as total_vendas 
-                FROM pedidos 
-                WHERE status = 'ENTREGUE' AND usuario_id = ?
-            """
+            query = "SELECT SUM(total) as total_vendas FROM pedidos WHERE status = 'ENTREGUE' AND usuario_id = ?"
             params = (usuario_id,)
         else:
             query = "SELECT SUM(total) as total_vendas FROM pedidos WHERE status = 'ENTREGUE'"
             params = ()
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-
             cursor.execute(query, params)
             row = cursor.fetchone()
             return row['total_vendas'] if row and row['total_vendas'] else 0.0

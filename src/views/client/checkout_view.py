@@ -24,12 +24,18 @@ class CheckoutView(tk.Frame):
             self.cart_controller.set_current_user(self.usuario.id)
         
         self.selected_address_id = None
-        self.selected_payment_method = None
+        self.selected_payment_method = "cartao" # Valor padrão
         self.cart_total = Decimal('0.00')
+        
+        # Variáveis de controle da UI
+        self.address_var = tk.IntVar()
+        self.payment_var = tk.StringVar(value="cartao")
         
         self._setup_header()
         self._setup_content()
-        self._load_data()
+        
+        # Carrega dados após montar a tela
+        self.after(100, self._load_data)
 
     def _setup_header(self):
         """Barra superior."""
@@ -54,12 +60,10 @@ class CheckoutView(tk.Frame):
         ).pack(side="right")
 
     def _setup_content(self):
-        """Layout principal com formulário e resumo."""
-        # Container principal
+        """Layout principal."""
         main = tk.Frame(self, bg=Config.COLOR_BG, padx=30, pady=20)
         main.pack(fill="both", expand=True)
         
-        # Frame esquerdo (formulário)
         self.form_frame = tk.Frame(main, bg=Config.COLOR_BG)
         self.form_frame.pack(side="left", fill="both", expand=True, padx=(0, 20))
         
@@ -67,34 +71,36 @@ class CheckoutView(tk.Frame):
         self.summary_frame = tk.Frame(main, bg=Config.COLOR_WHITE, width=300, padx=20, pady=20)
         self.summary_frame.pack(side="right", fill="y")
         self.summary_frame.pack_propagate(False)
+        
+        # Inicializa com texto de carregando ou vazio, mas NÃO chama _setup_summary aqui ainda
+        tk.Label(self.summary_frame, text="Carregando...", bg=Config.COLOR_WHITE).pack()
 
     def _load_data(self):
-        """Carrega dados do carrinho e endereços."""
-        if not self.usuario:
-            tk.Label(
-                self.form_frame,
-                text="Você precisa estar logado",
-                font=Config.FONT_BODY,
-                bg=Config.COLOR_BG
-            ).pack()
-            return
+        """Carrega dados e monta a tela."""
+        if not self.usuario: return
         
-        # Busca carrinho
+        # 1. Busca Carrinho
         cart_result = self.cart_controller.get_cart()
         if cart_result['success']:
             carrinho = cart_result.get('data', {})
-            self.cart_total = carrinho.get('total', Decimal('0.00'))
+            # Garante float ou decimal
+            self.cart_total = Decimal(str(carrinho.get('total', 0.0)))
             
             if not carrinho.get('itens'):
                 messagebox.showwarning("Aviso", "Seu carrinho está vazio!")
                 self.controller.show_view("HomeView", data=self.usuario)
                 return
         
-        # Monta o formulário
+        # Remove widgets antigos para não duplicar informações
+        for widget in self.form_frame.winfo_children():
+            widget.destroy()
+        for widget in self.summary_frame.winfo_children():
+            widget.destroy()
+
+        # 3. Monta a tela com dados atualizados
         self._setup_address_section()
         self._setup_payment_section()
         self._setup_summary()
-
     def _setup_address_section(self):
         """Seção de seleção de endereço."""
         # Título
@@ -109,8 +115,8 @@ class CheckoutView(tk.Frame):
         # Busca endereços
         result = self.checkout_controller.get_shipping_addresses()
         
+        # Verifica se tem endereços
         if not result['success'] or not result.get('data'):
-            # Sem endereços cadastrados
             no_address_frame = tk.Frame(self.form_frame, bg=Config.COLOR_WHITE, padx=15, pady=15)
             no_address_frame.pack(fill="x", pady=(0, 20))
             
@@ -121,28 +127,41 @@ class CheckoutView(tk.Frame):
                 bg=Config.COLOR_WHITE
             ).pack()
             
-            tk.Label(
+            # Botão de cadastro
+            tk.Button(
                 no_address_frame,
-                text="Por favor, cadastre um endereço para continuar.",
-                font=Config.FONT_SMALL,
-                bg=Config.COLOR_WHITE,
-                fg=Config.COLOR_TEXT_LIGHT
-            ).pack()
+                text="+ Cadastrar Novo Endereço",
+                bg=Config.COLOR_ACCENT,
+                fg="white",
+                font=Config.FONT_BODY,
+                cursor="hand2",
+                command=lambda: self.controller.show_view("AddressFormView", data=self.usuario)
+            ).pack(pady=10)
             return
         
         enderecos = result['data']
         
-        # Frame com scroll para endereços
+        # Frame com scroll para endereços (simplificado aqui como frame normal)
         address_container = tk.Frame(self.form_frame, bg=Config.COLOR_BG)
         address_container.pack(fill="x", pady=(0, 20))
-        
-        self.address_var = tk.IntVar()
         
         for endereco in enderecos:
             self._create_address_card(address_container, endereco)
         
+        # Botão para adicionar mais endereços
+        tk.Button(
+            address_container,
+            text="+ Adicionar Outro Endereço",
+            bg="#DDDDDD",
+            fg="#333333",
+            bd=0,
+            cursor="hand2",
+            command=lambda: self.controller.show_view("AddressFormView", data=self.usuario)
+        ).pack(anchor="w", pady=5)
+
         # Seleciona o primeiro ou principal por padrão
         if enderecos:
+            # Tenta achar o principal, senão pega o primeiro
             principal = next((e for e in enderecos if e.get('principal')), enderecos[0])
             self.address_var.set(principal['id'])
             self.selected_address_id = principal['id']
@@ -169,9 +188,13 @@ class CheckoutView(tk.Frame):
         
         principal_tag = " (Principal)" if endereco.get('principal') else ""
         
+        # --- CORREÇÃO AQUI: Usamos 'logradouro' em vez de 'rua' ---
+        rua = endereco.get('logradouro') or endereco.get('rua') or "Endereço sem rua"
+        numero = endereco.get('numero', 'S/N')
+        
         tk.Label(
             info_frame,
-            text=f"{endereco.get('rua', '')}, {endereco.get('numero', '')}{principal_tag}",
+            text=f"{rua}, {numero}{principal_tag}",
             font=Config.FONT_BODY,
             bg=Config.COLOR_WHITE,
             anchor="w"
@@ -179,7 +202,7 @@ class CheckoutView(tk.Frame):
         
         tk.Label(
             info_frame,
-            text=f"{endereco.get('cidade', '')} - {endereco.get('estado', '')} | CEP: {endereco.get('cep', '')}",
+            text=f"{endereco.get('bairro', '')} - {endereco.get('cidade', '')}/{endereco.get('estado', '')} | CEP: {endereco.get('cep', '')}",
             font=Config.FONT_SMALL,
             bg=Config.COLOR_WHITE,
             fg=Config.COLOR_TEXT_LIGHT,
@@ -203,9 +226,6 @@ class CheckoutView(tk.Frame):
         payment_frame = tk.Frame(self.form_frame, bg=Config.COLOR_WHITE, padx=15, pady=15)
         payment_frame.pack(fill="x", pady=(0, 20))
         
-        self.payment_var = tk.StringVar(value="cartao")
-        self.selected_payment_method = "cartao"
-        
         # Opção Cartão
         tk.Radiobutton(
             payment_frame,
@@ -220,7 +240,7 @@ class CheckoutView(tk.Frame):
         # Opção PIX
         tk.Radiobutton(
             payment_frame,
-            text="📱 PIX (Pagamento pendente após gerar QR Code)",
+            text="📱 PIX (Aprovação Imediata)",
             variable=self.payment_var,
             value="pix",
             bg=Config.COLOR_WHITE,
@@ -253,7 +273,7 @@ class CheckoutView(tk.Frame):
         # Validade
         tk.Label(
             row_frame,
-            text="Validade (MM/AA):",
+            text="Validade:",
             font=Config.FONT_SMALL,
             bg=Config.COLOR_WHITE
         ).pack(side="left", padx=(0, 5))
@@ -302,7 +322,7 @@ class CheckoutView(tk.Frame):
             bg=Config.COLOR_WHITE
         ).pack(anchor="w", pady=5)
         
-        # Frete (simulado)
+        # Frete (simulado, deveria vir do controller)
         frete = Decimal('15.00')
         tk.Label(
             self.summary_frame,
@@ -339,6 +359,9 @@ class CheckoutView(tk.Frame):
     def _finalize_order(self):
         """Processa a finalização do pedido."""
         # Validações
+        # Pega o ID da variável do Radiobutton
+        self.selected_address_id = self.address_var.get()
+        
         if not self.selected_address_id:
             messagebox.showwarning("Atenção", "Selecione um endereço de entrega!")
             return
@@ -369,7 +392,7 @@ class CheckoutView(tk.Frame):
                 'chave_pix': self.usuario.email
             }
         
-        # Processa o pedido
+        # Processa o pedido via Controller
         resultado = self.checkout_controller.process_order(
             endereco_id=self.selected_address_id,
             metodo_pagamento=self.selected_payment_method,
@@ -377,12 +400,12 @@ class CheckoutView(tk.Frame):
         )
         
         if resultado['success']:
+            msg = "Pedido realizado com sucesso!"
             if self.selected_payment_method == 'pix':
-                messagebox.showinfo(
-                    "Pedido Criado", 
-                    "Pedido criado com sucesso!\n\nGere o QR Code PIX para concluir o pagamento."
-                )
-            else:
-                messagebox.showinfo("Sucesso", resultado['message'])
+                msg += "\n\nO QR Code PIX foi enviado para seu e-mail."
+            
+            messagebox.showinfo("Sucesso", msg)
+            # A navegação já é feita pelo controller, mas se precisar forçar:
+            # self.controller.show_view("MyOrdersView", data=self.usuario)
         else:
             messagebox.showerror("Erro", resultado['message'])

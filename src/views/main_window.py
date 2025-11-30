@@ -1,29 +1,30 @@
 import tkinter as tk
 from src.config.settings import Config
 
+
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        
+
         # Configuração para evitar erro X11 BadLength
         # Usa rendering mais simples para fontes
         try:
-            self.tk.call('tk', 'scaling', 1.0)
+            self.tk.call("tk", "scaling", 1.0)
             # Limita cache de fontes para evitar BadLength
-            self.option_add('*Font', 'TkDefaultFont')
+            self.option_add("*Font", "TkDefaultFont")
         except:
             pass
-        
+
         self.title(Config.APP_NAME)
         self.geometry(Config.WINDOW_SIZE)
         self.configure(bg=Config.COLOR_BG)
-        
+
         # Container Principal
         self.container = tk.Frame(self, bg=Config.COLOR_BG)
         self.container.pack(fill="both", expand=True)
-        
+
         self.current_view = None
-        
+
         # Inicia no Login
         self.show_view("LoginView")
 
@@ -35,50 +36,68 @@ class MainWindow(tk.Tk):
         # Roteamento
         if view_name == "LoginView":
             from src.views.client.login_view import LoginView
+
             self.current_view = LoginView(self.container, self)
-            
+
         elif view_name == "RegisterView":
             from src.views.client.register_view import RegisterView
+
             self.current_view = RegisterView(self.container, self)
-            
+
         elif view_name == "HomeView":
             from src.views.client.home_view import HomeView
+
             self.current_view = HomeView(self.container, self, data=data)
 
         elif view_name == "AdminDashboard":
             from src.views.admin.dashboard_view import DashboardView
+
             # Passamos o objeto usuário (data) para o dashboard saber o nome
             self.current_view = DashboardView(self.container, self, usuario_logado=data)
 
         elif view_name == "ManageProducts":
             from src.views.admin.manage_products_view import ManageProductsView
+
             self.current_view = ManageProductsView(self.container, self, data=data)
-        
+
         elif view_name == "ManageOrders":
             from src.views.admin.manage_orders_view import ManageOrdersView
+
             self.current_view = ManageOrdersView(self.container, self, data=data)
-        
+
         elif view_name == "ManageCategories":
             from src.views.admin.manage_categories_view import ManageCategoriesView
+
             self.current_view = ManageCategoriesView(self.container, self, data=data)
 
         elif view_name == "ProductFormView":
             from src.views.admin.product_form_view import ProductFormView
+
             self.current_view = ProductFormView(self.container, self, data=data)
-        
+
         elif view_name == "CartView":
             from src.views.client.cart_view import CartView
+
             self.current_view = CartView(self.container, self, data=data)
-        
+
         elif view_name == "CheckoutView":
             from src.views.client.checkout_view import CheckoutView
+
             self.current_view = CheckoutView(self.container, self, data=data)
-        
+
         elif view_name == "MyOrdersView":
             from src.views.client.my_orders_view import MyOrdersView
+
             self.current_view = MyOrdersView(self.container, self, data=data)
-            
+
+        elif view_name == "AddressFormView":
+            from src.views.client.address_form_view import AddressFormView
+
+            self.current_view = AddressFormView(self.container, self, data=data)
+
         else:
-            self.current_view = tk.Label(self.container, text=f"404 - Tela {view_name} não encontrada")
+            self.current_view = tk.Label(
+                self.container, text=f"404 - Tela {view_name} não encontrada"
+            )
 
         self.current_view.pack(fill="both", expand=True)
