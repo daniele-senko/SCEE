@@ -151,7 +151,7 @@ class IconButton(tk.Button):
         config = {
             'text': icon_text,
             'command': command,
-            'font': ('Arial', 14),
+            'font': ('TkDefaultFont', 14),
             'bg': Config.COLOR_BG,
             'fg': Config.COLOR_TEXT,
             'relief': 'flat',

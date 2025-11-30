@@ -179,7 +179,7 @@ class StatCard(BaseCard):
             self._icon_label = tk.Label(
                 self,
                 text=self._icon,
-                font=('Arial', 24),
+                font=('TkDefaultFont', 24),
                 bg=self.bg_color,
                 fg=self._color
             )
@@ -189,7 +189,7 @@ class StatCard(BaseCard):
         self._value_label = tk.Label(
             self,
             text=str(self._value),
-            font=('Arial', 28, 'bold'),
+            font=('TkDefaultFont', 28, 'bold'),
             bg=self.bg_color,
             fg=self._color
         )
@@ -289,7 +289,7 @@ class InfoCard(BaseCard):
         tk.Label(
             icon_frame,
             text=self._icon,
-            font=('Arial', 24),
+            font=('TkDefaultFont', 24),
             bg=self._icon_bg,
             fg='white'
         ).place(relx=0.5, rely=0.5, anchor='center')

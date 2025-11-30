@@ -167,7 +167,7 @@ class SearchField(tk.Frame):
             field_container,
             text="🔍",
             bg='#F8F9FA',
-            font=('Arial', 12)
+            font=('TkDefaultFont', 12)
         ).pack(side="left", padx=(10, 5))
         
         # Entry
@@ -191,7 +191,7 @@ class SearchField(tk.Frame):
             bg='#F8F9FA',
             fg=Config.COLOR_TEXT_LIGHT,
             cursor='hand2',
-            font=('Arial', 12)
+            font=('TkDefaultFont', 12)
         )
         self.clear_btn.pack(side="right", padx=10)
         self.clear_btn.pack_forget()  # Esconde inicialmente

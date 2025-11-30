@@ -72,7 +72,7 @@ class Modal(tk.Toplevel):
         tk.Label(
             header,
             text=icon,
-            font=('Arial', 32),
+            font=('TkDefaultFont', 32),
             bg=Config.COLOR_WHITE,
             fg=color
         ).pack()
@@ -193,7 +193,7 @@ class LoadingModal(tk.Toplevel):
         self.loading_label = tk.Label(
             container,
             text="⏳",
-            font=('Arial', 32),
+            font=('TkDefaultFont', 32),
             bg=Config.COLOR_WHITE,
             fg=Config.COLOR_PRIMARY
         )
