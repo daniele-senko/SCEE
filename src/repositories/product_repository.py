@@ -52,7 +52,6 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
             conn.commit()
             obj['id'] = cursor.lastrowid
             
-            # Atualiza ID do objeto original se for objeto
             if hasattr(obj_entrada, '_id'):
                 obj_entrada._id = cursor.lastrowid
         
@@ -89,7 +88,6 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
             
             if row:
                 dados = dict(row)
-                # Agora buscamos as imagens para retornar o produto completo
                 dados['imagens'] = self.buscar_imagens(id)
                 return dados
             return None
@@ -157,11 +155,10 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
             conn.commit()
             return cursor.rowcount > 0
 
+    # --- MÉTODOS PARA TRANSAÇÃO DO CHECKOUT ---
+
     def buscar_por_id_para_bloqueio(self, id: int, conexao) -> Dict[str, Any]:
-        """
-        Busca produto usando uma conexão existente (dentro da transação).
-        Isso garante que o Checkout veja o estado do produto dentro da mesma operação.
-        """
+        """Busca produto usando uma conexão existente (transação)."""
         query = "SELECT * FROM produtos WHERE id = ?"
         cursor = conexao.cursor()
         cursor.execute(query, (id,))
@@ -171,10 +168,7 @@ class ProductRepository(BaseRepository[Dict[str, Any]]):
         return dict(row)
 
     def atualizar_estoque(self, id: int, novo_estoque: int, conexao) -> None:
-        """
-        Atualiza apenas o estoque usando uma conexão existente.
-        Permite que o CheckoutService controle o commit/rollback.
-        """
+        """Atualiza apenas o estoque usando uma conexão existente."""
         query = "UPDATE produtos SET estoque = ? WHERE id = ?"
         cursor = conexao.cursor()
         cursor.execute(query, (novo_estoque, id))

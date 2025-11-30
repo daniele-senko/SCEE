@@ -120,7 +120,7 @@ class CheckoutService:
             cliente_id = carrinho_dados['usuario_id']
             endereco_id = endereco_entrega['id']
             
-            # Normaliza string para o banco (CARTAO ou PIX)
+            # Normaliza string para o banco
             tipo_normalizado = "CARTAO" if tipo_pagamento_str == "cartao" else "PIX"
 
             novo_pedido = Pedido(
@@ -141,7 +141,6 @@ class CheckoutService:
             
             usuario = self.user_repo.buscar_por_id(cliente_id)
             if usuario:
-                # CORREÇÃO AQUI: usuario.to_dict() para evitar o erro 'not subscriptable'
                 self.email_service.enviar_confirmacao_pedido(usuario.to_dict(), novo_pedido.to_dict())
 
             return novo_pedido
