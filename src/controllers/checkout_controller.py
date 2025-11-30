@@ -12,7 +12,7 @@ from src.repositories.order_repository import PedidoRepository
 from src.repositories.product_repository import ProductRepository
 from src.repositories.address_repository import EnderecoRepository
 from src.services.email_service import EmailService
-from src.integration.pagamento_gateway import PagamentoCartao, PagamentoPix
+from src.integration.payment.payment_gateway import PagamentoCartao, PagamentoPix
 
 
 class CheckoutController(BaseController):

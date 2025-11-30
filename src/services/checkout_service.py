@@ -1,141 +1,99 @@
 from typing import Dict, Any
 from src.models.enums import StatusPedido, StatusPagamento
-from integration.pagamento_gateway import GatewayPagamentoBase # Interface
+from src.models.sales.order_model import Pedido
+from src.models.sales.cart_item_model import ItemPedido
+
+from src.integration.payment.payment_gateway import PaymentGateway
+from src.integration.shipping.shipping_calculator import ShippingCalculator
+
 from src.repositories.cart_repository import CarrinhoRepository
 from src.repositories.order_repository import PedidoRepository
 from src.repositories.product_repository import ProdutoRepository
-from src.models.sales.order_model import Pedido
-from src.models.sales.cart_item_model import ItemPedido
-from src.services.email_service import EmailService # Mock service
+from src.services.email_service import EmailService
 
-# --- EXCEÇÕES PERSONALIZADAS ---
-# (Ajuda o DEV 1 a tratar erros específicos na rota da API)
-
-class EstoqueInsuficienteError(Exception):
-    """Exceção levantada quando o estoque de um produto é insuficiente."""
-    pass
-
-class PagamentoRecusadoError(Exception):
-    """Exceção levantada quando o Gateway de Pagamento recusa a transação."""
-    pass
-
-# --- CLASSE DE SERVIÇO PRINCIPAL (ORQUESTRAÇÃO) ---
+class EstoqueInsuficienteError(Exception): pass
+class PagamentoRecusadoError(Exception): pass
 
 class CheckoutService:
-    """
-    Responsável por orquestrar todo o processo de finalização do pedido.
-    Garante a integridade transacional (RNF07.1).
-    """
-
     def __init__(self, 
                  carrinho_repo: CarrinhoRepository,
                  pedido_repo: PedidoRepository,
                  produto_repo: ProdutoRepository,
                  email_service: EmailService,
-                 # O Pagamento Gateway é injetado, mas é a interface (Polimorfismo!)
-                 pagamento_gateway: GatewayPagamentoBase):
-        """Injeção de Dependências (Controle de Inversão): Recebe Repositórios e Interfaces."""
+                 pagamento_gateway: PaymentGateway,      # Injeção 1
+                 frete_calculator: ShippingCalculator):  # Injeção 2
+        
         self.carrinho_repo = carrinho_repo
         self.pedido_repo = pedido_repo
         self.produto_repo = produto_repo
         self.email_service = email_service
         self.pagamento_gateway = pagamento_gateway
+        self.frete_calculator = frete_calculator
 
-    def processar_compra(self, 
-                         carrinho_id: int, 
-                         dados_pagamento: Dict[str, Any], 
-                         endereco_id: int) -> Pedido:
-        """
-        Orquestra a criação do Pedido de forma atômica (Tudo ou Nada).
-        
-        Args:
-            carrinho_id: ID do carrinho a ser convertido em pedido.
-            dados_pagamento: Dados para o Gateway (ex: número do cartão).
-            endereco_id: ID do Endereço de entrega selecionado pelo cliente.
-
-        Returns:
-            O objeto Pedido criado.
-        """
-        
-        # 1. PRÉ-VALIDAÇÃO (LEITURA DO CARRINHO E CÁLCULO)
+    def processar_compra(self, carrinho_id: int, dados_pagamento: Dict[str, Any], endereco_entrega: Dict[str, Any]) -> Pedido:
+        # Busca Carrinho
         carrinho = self.carrinho_repo.buscar_por_id(carrinho_id)
         if not carrinho or not carrinho.itens:
-            raise ValueError("O carrinho está vazio ou é inválido.")
-        
-        # Calcula o valor total a ser cobrado
-        valor_total = carrinho.calcular_total() # Assume que este método está no Model Carrinho
-        
-        # 2. INICIAR TRANSAÇÃO (RNF07.1)
-        # O PedidoRepository é responsável por abrir a conexão e a transação MySQL
-        conexao = self.pedido_repo.iniciar_transacao() 
+            raise ValueError("Carrinho vazio.")
+
+        # Calcula Frete 
+        # Vamos assumir peso 1.0kg por item para simplificar a simulação
+        peso_total = sum([item.quantidade * 1.0 for item in carrinho.itens])
+        cep = endereco_entrega.get('cep', '00000-000')
+        valor_frete = self.frete_calculator.calcular(cep, peso_total)
+
+        # Calcula Totais
+        subtotal = carrinho.calcular_total()
+        valor_total = subtotal + valor_frete
+
+        # Inicia Transação
+        conexao = self.pedido_repo.iniciar_transacao()
         
         try:
-            # 3. VERIFICAR, BLOQUEAR E ABATER ESTOQUE (RNF07.3 - Concorrência)
             itens_pedido = []
             
+            # Validação e Baixa de Estoque
             for item_carrinho in carrinho.itens:
-                # O ProdutoRepository deve buscar o item DENTRO desta conexão 
-                # para garantir que o abate seja seguro.
-                produto = self.produto_repo.buscar_por_id_para_bloqueio(item_carrinho.produto_id, conexao) 
+                produto = self.produto_repo.buscar_por_id_para_bloqueio(item_carrinho.produto_id, conexao)
                 
                 if produto.estoque < item_carrinho.quantidade:
-                    # Se falhar, levanta exceção para forçar o ROLLBACK no 'finally'
-                    raise EstoqueInsuficienteError(f"Estoque insuficiente para {produto.nome}.")
+                    raise EstoqueInsuficienteError(f"Estoque insuficiente: {produto.nome}")
                 
-                # Abate o estoque no objeto (e a alteração será salva no DB)
                 produto.estoque -= item_carrinho.quantidade
-                self.produto_repo.atualizar_estoque(produto, conexao) # Persiste o abate
+                self.produto_repo.atualizar_estoque(produto, conexao)
 
-                # Constrói o ItemPedido
-                item_pedido = ItemPedido(
+                itens_pedido.append(ItemPedido(
                     produto_id=produto.id,
                     quantidade=item_carrinho.quantidade,
-                    preco_unitario=produto.preco # Garante o preço daquele momento
-                )
-                itens_pedido.append(item_pedido)
+                    preco_unitario=produto.preco
+                ))
 
-            # 4. PROCESSAR PAGAMENTO (POLIMORFISMO)
-            # Chama a interface sem se importar se é Cartão ou Pix
-            pagamento_status = self.pagamento_gateway.processar_pagamento(
-                valor_total, 
-                dados_pagamento
-            )
-
-            # 5. VERIFICAR STATUS DO PAGAMENTO
-            if pagamento_status == StatusPagamento.REJEITADO:
-                raise PagamentoRecusadoError("Pagamento recusado pela operadora.")
+            # Processa Pagamento
+            status_pag = self.pagamento_gateway.processar_pagamento(valor_total, dados_pagamento)
             
-            # 6. CRIAR REGISTRO DO PEDIDO
-            
-            # Define o status inicial baseado na resposta do pagamento
-            if pagamento_status == StatusPagamento.APROVADO:
-                status_final = StatusPedido.PROCESSANDO
-            else: # PENDENTE (Pix, Boleto)
-                status_final = StatusPedido.PAGAMENTO_PENDENTE 
+            if status_pag == StatusPagamento.REJEITADO:
+                raise PagamentoRecusadoError("Pagamento não autorizado.")
 
+            # Cria Pedido
+            status_pedido = StatusPedido.PROCESSANDO if status_pag == StatusPagamento.APROVADO else StatusPedido.PAGAMENTO_PENDENTE
+            
             novo_pedido = Pedido(
                 cliente_id=carrinho.cliente_id,
-                endereco_entrega_id=endereco_id,
+                endereco_entrega_id=endereco_entrega.get('id'),
                 valor_total=valor_total,
-                status=status_final,
+                status=status_pedido,
                 itens=itens_pedido
             )
+            # Nota: Você precisará garantir que seu PedidoModel aceite 'frete' se quiser salvar separado
             
-            # Salva Pedido e ItensPedido no DB, usando a conexão transacional
             self.pedido_repo.salvar_pedido_e_itens(novo_pedido, conexao)
-
-            # 7. FINALIZAR TRANSAÇÃO COM SUCESSO (COMMIT)
-            self.pedido_repo.commit_transacao(conexao) 
+            self.pedido_repo.commit_transacao(conexao)
             
-            # 8. AÇÕES PÓS-TRANSAÇÃO (Não precisam de rollback se falharem)
             self.carrinho_repo.limpar_carrinho(carrinho_id)
             self.email_service.enviar_confirmacao(novo_pedido)
-
+            
             return novo_pedido
 
-        except (EstoqueInsuficienteError, PagamentoRecusadoError, Exception) as e:
-            # 9. REVERTER TRANSAÇÃO (ROLLBACK)
-            print(f"Erro no checkout: {e}. Executando ROLLBACK.")
-            self.pedido_repo.rollback_transacao(conexao) 
-            # Relança a exceção para que a rota da API (DEV 1) possa notificar o cliente
+        except Exception as e:
+            self.pedido_repo.rollback_transacao(conexao)
             raise e

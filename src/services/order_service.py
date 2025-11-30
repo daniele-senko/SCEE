@@ -267,46 +267,57 @@ class PedidoService:
         usuario_id: Optional[int] = None,
         motivo: Optional[str] = None
     ) -> bool:
-        """Cancela um pedido.
+        """Cancela um pedido e ESTORNA o estoque."""
         
-        Args:
-            pedido_id: ID do pedido
-            usuario_id: ID do usuário (para validar propriedade)
-            motivo: Motivo do cancelamento
-            
-        Returns:
-            True se cancelado com sucesso
-            
-        Raises:
-            PedidoNaoEncontradoError: Pedido não encontrado
-            CancelamentoNaoPermitidoError: Cancelamento não permitido
-        """
-        # Buscar pedido
-        pedido = self.pedido_repo.buscar_por_id(pedido_id)
+        # Buscar pedido COMPLETO (com itens) para saber o que devolver
+        pedido = self.pedido_repo.buscar_completo(pedido_id) # Certifique-se que seu repo tem esse método ou similar
         if not pedido:
             raise PedidoNaoEncontradoError(f"Pedido {pedido_id} não encontrado")
         
-        # Validar propriedade
+        # Validar propriedade (se for cliente)
         if usuario_id and pedido['usuario_id'] != usuario_id:
             raise CancelamentoNaoPermitidoError("Pedido pertence a outro usuário")
         
-        # Validar se cancelamento é permitido
+        # Validar se cancelamento é permitido (Regra de Status e Tempo)
         if not self._pode_cancelar(pedido):
             raise CancelamentoNaoPermitidoError(
                 f"Pedido no status '{pedido['status']}' não pode ser cancelado"
             )
         
-        # Adicionar motivo às observações
-        observacoes = pedido.get('observacoes', '')
+        # ESTORNO DE ESTOQUE
+        try:
+            # Iteramos sobre os itens do pedido para devolver a quantidade
+            for item in pedido.get('itens', []):
+                produto = self.produto_repo.buscar_por_id(item['produto_id'])
+                if produto:
+                    # Se o repo retornar dict:
+                    novo_estoque = int(produto['estoque']) + int(item['quantidade'])
+                    # Atualiza apenas o campo estoque (ou o produto todo se o repo exigir)
+                    produto['estoque'] = novo_estoque
+                    self.produto_repo.atualizar(produto)
+                    
+                    # Se o repo retornar Objeto, seria:
+                    # produto.estoque += item['quantidade']
+                    # self.produto_repo.atualizar(produto)
+
+        except Exception as e:
+            # Logar erro crítico aqui (estoque pode ficar inconsistente se falhar no meio)
+            print(f"Erro crítico ao estornar estoque: {e}")
+            raise e
+
+        # Atualizar status do pedido
+        observacoes = pedido.get('observacoes', '') or ''
         if motivo:
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             observacoes += f"\n[CANCELADO em {timestamp}] {motivo}"
         
-        # Atualizar pedido
+        # Precisamos passar apenas os dados atualizáveis para o repo, ou o objeto todo
         pedido['status'] = self.STATUS_CANCELADO
         pedido['observacoes'] = observacoes
-        self.pedido_repo.atualizar(pedido)
         
+        self.pedido_repo.atualizar_status(pedido['id'], self.STATUS_CANCELADO) 
+        # Ou self.pedido_repo.atualizar(pedido) se atualizar tudo
+
         return True
     
     def obter_estatisticas(self, usuario_id: Optional[int] = None) -> Dict[str, Any]:
