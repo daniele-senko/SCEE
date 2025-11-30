@@ -1,127 +1,89 @@
-"""Repositório para gerenciamento de categorias.
-Implementa operações CRUD para a tabela categorias.
-"""
-from typing import Optional, List, Dict, Any, Union
+"""Repositório de Categorias."""
+from typing import List, Dict, Any, Optional, Union
 from src.repositories.base_repository import BaseRepository
-from src.models.products.category_model import Categoria
 
-class CategoriaRepository(BaseRepository[Dict[str, Any]]):
-    """Repositório de categorias com operações CRUD completas."""
+class CategoryRepository(BaseRepository[Dict[str, Any]]):
+    """
+    Gerencia o acesso a dados da tabela 'categorias'.
+    """
     
     def __init__(self):
         super().__init__()
 
-    def _adaptar_para_dict(self, obj: Union[Categoria, Dict]) -> Dict:
-        """
-        Método auxiliar que converte Objeto -> Dicionário.
-        Resolve o conflito entre POO e o código legado.
-        """
-        if isinstance(obj, dict):
-            return obj
-            
-        # Se for um objeto Categoria, transforma em dict
-        return {
-            "id": getattr(obj, "id", None),
-            "nome": getattr(obj, "nome", ""),
-            # Define valores padrão se o objeto não tiver esses atributos
-            "descricao": getattr(obj, "descricao", ""), 
-            "ativo": getattr(obj, "ativo", 1)
-        }
-
-    def salvar(self, obj_entrada: Union[Categoria, Dict]) -> Dict[str, Any]:
-        """Salva uma nova categoria (Aceita Objeto ou Dict)."""
-        
-        # Converte para o formato que o código do seu amigo entende (Dict)
-        obj = self._adaptar_para_dict(obj_entrada)
-
+    def salvar(self, categoria: Dict[str, Any]) -> Dict[str, Any]:
+        """Cadastra uma nova categoria."""
         query = """
             INSERT INTO categorias (nome, descricao, ativo)
             VALUES (?, ?, ?)
         """
+        params = (
+            categoria['nome'],
+            categoria.get('descricao', ''),
+            categoria.get('ativo', 1)
+        )
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                query,
-                (obj['nome'], obj.get('descricao', ''), obj.get('ativo', 1))
-            )
+            cursor.execute(query, params)
             conn.commit()
-            obj['id'] = cursor.lastrowid
+            categoria['id'] = cursor.lastrowid
             
-            # Se a entrada foi um Objeto, atualizamos o ID dele também
-            if hasattr(obj_entrada, '_id'): 
-                obj_entrada._id = cursor.lastrowid
-        
-        return obj
-    
-    def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
-        query = "SELECT * FROM categorias WHERE id = ?"
-        
-        with self._conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    
-    def listar(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict[str, Any]]:
-        query = "SELECT * FROM categorias ORDER BY nome"
-        
-        params = []
-        if limit is not None:
-            query += " LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
-        
-        with self._conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, tuple(params))
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-    
-    def atualizar(self, obj_entrada: Union[Categoria, Dict]) -> Dict[str, Any]:
-        obj = self._adaptar_para_dict(obj_entrada)
-        
-        if 'id' not in obj or not obj['id']:
-            raise ValueError("Categoria deve ter um ID para ser atualizada")
-        
+        return categoria
+
+    def atualizar(self, categoria: Dict[str, Any]) -> Dict[str, Any]:
+        """Atualiza dados de uma categoria."""
         query = """
-            UPDATE categorias
+            UPDATE categorias 
             SET nome = ?, descricao = ?, ativo = ?
             WHERE id = ?
         """
+        params = (
+            categoria['nome'],
+            categoria.get('descricao', ''),
+            categoria.get('ativo', 1),
+            categoria['id']
+        )
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                query,
-                (obj['nome'], obj.get('descricao', ''), obj.get('ativo', 1), obj['id'])
-            )
+            cursor.execute(query, params)
             conn.commit()
-        
-        return obj
-    
-    def deletar(self, id: int) -> bool:
-        query = "DELETE FROM categorias WHERE id = ?"
-        
-        with self._conn_factory() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (id,))
-            conn.commit()
-            return cursor.rowcount > 0
-    
-    def listar_ativas(self) -> List[Dict[str, Any]]:
-        query = "SELECT * FROM categorias WHERE ativo = 1 ORDER BY nome"
+            
+        return categoria
+
+    def listar(self) -> List[Dict[str, Any]]:
+        """Lista todas as categorias."""
+        query = "SELECT * FROM categorias ORDER BY nome"
         
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
-    
+
+    def buscar_por_id(self, id: int) -> Optional[Dict[str, Any]]:
+        """Busca categoria por ID."""
+        query = "SELECT * FROM categorias WHERE id = ?"
+        with self._conn_factory() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+            
     def buscar_por_nome(self, nome: str) -> Optional[Dict[str, Any]]:
+        """Busca categoria por Nome (para evitar duplicatas)."""
         query = "SELECT * FROM categorias WHERE nome = ?"
-        
         with self._conn_factory() as conn:
             cursor = conn.cursor()
             cursor.execute(query, (nome,))
             row = cursor.fetchone()
             return dict(row) if row else None
+
+    def deletar(self, id: int) -> bool:
+        """Deleta (ou desativa) uma categoria."""
+        query = "DELETE FROM categorias WHERE id = ?"
+        with self._conn_factory() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (id,))
+            conn.commit()
+            return cursor.rowcount > 0
