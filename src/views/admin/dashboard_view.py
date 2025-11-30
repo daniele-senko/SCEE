@@ -108,12 +108,11 @@ class DashboardView(tk.Frame):
             
         elif action == "ManageProducts":
             # Vai para a lista de produtos
-            self.controller.show_view("ManageProducts")
+            self.controller.show_view("ManageProducts", data=self.usuario)
             
         elif action == "ManageOrders":
-            # Futuro: Vai para lista de pedidos (se já existir no main_window)
-            # self.controller.show_view("ManageOrders") 
-            print("Tela de Pedidos ainda não implementada")
+            # Vai para lista de pedidos
+            self.controller.show_view("ManageOrders", data=self.usuario)
             
         else:
             print(f"Ação desconhecida: {action}")

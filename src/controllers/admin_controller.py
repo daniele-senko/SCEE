@@ -206,13 +206,22 @@ class AdminController(BaseController):
         
         try:
             if status:
-                pedidos = self.order_service.listar_pedidos_por_status(
-                    status,
-                    limit=limit
-                )
+                pedidos = self.order_repo.listar_por_status(status, limit=limit)
             else:
-                # Listar todos os pedidos usando repository diretamente
-                pedidos = self.order_repo.listar_todos(limit=limit)
+                # Listar todos os pedidos
+                pedidos = self.order_repo.listar(limit=limit)
+            
+            # Enriquecer pedidos com informações do cliente
+            user_repo = UsuarioRepository()
+            for pedido in pedidos:
+                usuario = user_repo.buscar_por_id(pedido['usuario_id'])
+                if usuario:
+                    pedido['cliente_nome'] = usuario.get('nome', 'N/A')
+                else:
+                    pedido['cliente_nome'] = 'N/A'
+                
+                # Buscar itens do pedido
+                pedido['itens'] = self.order_repo.listar_itens(pedido['id'])
             
             return self._success_response(
                 f'{len(pedidos)} pedido(s) encontrado(s)',

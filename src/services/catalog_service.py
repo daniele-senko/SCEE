@@ -94,5 +94,31 @@ class CatalogService:
         # 3. Salva
         self.product_repo.salvar(produto_dict)
 
+    def atualizar_produto(self, produto_id: int, nome: str, sku: str, preco: float, estoque: int, nome_categoria: str):
+        """
+        Atualiza um produto existente.
+        """
+        # 1. Busca a categoria pelo nome
+        categorias = self.listar_categorias()
+        categoria_selecionada = next((c for c in categorias if c.nome == nome_categoria), None)
+        
+        if not categoria_selecionada:
+            raise ValueError(f"Categoria '{nome_categoria}' inválida.")
+
+        # 2. Prepara o Dicionário para atualização
+        produto_dict = {
+            'id': produto_id,
+            'nome': nome,
+            'sku': sku,
+            'preco': float(preco),
+            'estoque': int(estoque),
+            'categoria_id': categoria_selecionada.id,
+            'descricao': '',  # Mantém vazio se não for editável
+            'ativo': 1
+        }
+
+        # 3. Atualiza
+        self.product_repo.atualizar(produto_dict)
+
     def remover_produto(self, id_produto: int):
         return self.product_repo.deletar(id_produto)

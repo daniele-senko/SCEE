@@ -199,11 +199,16 @@ class CartController(BaseController):
                 self.current_usuario_id
             )
             
-            itens = self.cart_service.listar_itens(carrinho['id'])
-            total = self.cart_service.calcular_total(carrinho['id'])
+            # CORREÇÃO: listar_itens() espera usuario_id, não carrinho_id
+            itens = self.cart_service.listar_itens(self.current_usuario_id)
             
+            # CORREÇÃO: calcular_total() também espera usuario_id
+            total = self.cart_service.calcular_total(self.current_usuario_id)
+            
+            # Estrutura corrigida para compatibilidade com a view
             cart_data = {
-                'carrinho': carrinho,
+                'id': carrinho['id'],
+                'usuario_id': carrinho['usuario_id'],
                 'itens': itens,
                 'total': total,
                 'quantidade_itens': len(itens)

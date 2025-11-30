@@ -1,85 +1,100 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from src.config.settings import Config
-from src.services.catalog_service import CatalogService
+from src.controllers.admin_controller import AdminController
 
-class ManageProductsView(tk.Frame):
+
+class ManageOrdersView(tk.Frame):
+    """
+    Tela de Gestão de Pedidos para Admin.
+    Exibe todos os pedidos do sistema.
+    """
+    
     def __init__(self, parent, controller, data=None):
         super().__init__(parent, bg=Config.COLOR_BG)
         self.controller = controller
-        self.service = CatalogService()
+        self.usuario = data  # Guarda o usuário logado
+        self.admin_controller = AdminController(controller)
+        
+        # Define o admin atual no controller
+        if self.usuario and hasattr(self.usuario, 'id'):
+            self.admin_controller.set_current_admin(self.usuario.id)
         
         self._setup_ui()
         self._load_data()
 
     def _setup_ui(self):
-        # --- Cabeçalho ---
+        # Cabeçalho
         header = tk.Frame(self, bg=Config.COLOR_WHITE, padx=20, pady=15)
         header.pack(fill="x")
         
-        tk.Label(header, text="Gerenciar Produtos", font=Config.FONT_HEADER, 
-                 bg=Config.COLOR_WHITE, fg=Config.COLOR_PRIMARY).pack(side="left")
+        tk.Label(
+            header, 
+            text="Gerenciar Pedidos", 
+            font=Config.FONT_HEADER, 
+            bg=Config.COLOR_WHITE, 
+            fg=Config.COLOR_PRIMARY
+        ).pack(side="left")
         
-        tk.Button(header, text="Voltar", bg=Config.COLOR_BG, fg=Config.COLOR_TEXT,
-                  command=lambda: self.controller.show_view("AdminDashboard")).pack(side="right")
+        tk.Button(
+            header, 
+            text="Voltar", 
+            bg=Config.COLOR_BG, 
+            fg=Config.COLOR_TEXT,
+            command=lambda: self.controller.show_view("AdminDashboard", data=self.usuario)
+        ).pack(side="right")
 
-        # --- Área de Conteúdo ---
+        # Área de Conteúdo
         content = tk.Frame(self, bg=Config.COLOR_BG, padx=20, pady=20)
         content.pack(fill="both", expand=True)
 
-        # --- Toolbar ---
-        toolbar = tk.Frame(content, bg=Config.COLOR_BG)
-        toolbar.pack(fill="x", pady=(0, 10))
-
-        # Botão Adicionar
-        tk.Button(toolbar, text="+ Novo Produto", bg=Config.COLOR_ACCENT, fg="white",
-                  font=Config.FONT_SMALL, width=15,
-                  command=lambda: self.controller.show_view("ProductFormView")).pack(side="left", padx=5)
-
-        # Botão Excluir
-        tk.Button(toolbar, text="Excluir Selecionado", bg=Config.COLOR_SECONDARY, fg="white",
-                  font=Config.FONT_SMALL, width=20,
-                  command=self._delete_product).pack(side="left", padx=5)
-
-        # --- Tabela (Treeview) ---
-        cols = ("ID", "SKU", "Nome", "Categoria", "Preço", "Estoque")
+        # Tabela (Treeview)
+        cols = ("ID", "Cliente", "Data", "Status", "Total", "Itens")
         self.tree = ttk.Treeview(content, columns=cols, show="headings", selectmode="browse")
         
         # Cabeçalhos
         for col in cols:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=100)
+            self.tree.column(col, width=120)
         
-        self.tree.column("Nome", width=300) # Nome mais largo
+        self.tree.column("Cliente", width=200)
         
-        self.tree.pack(fill="both", expand=True)
+        # Scrollbar
+        scrollbar = ttk.Scrollbar(content, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        
+        self.tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
     def _load_data(self):
+        """Carrega todos os pedidos do sistema."""
         # Limpa a tabela
         for item in self.tree.get_children():
             self.tree.delete(item)
             
-        # Busca do banco via serviço
         try:
-            produtos = self.service.listar_produtos()
-            for p in produtos:
-                cat_nome = p.categoria.nome if p.categoria else "-"
-                self.tree.insert("", "end", values=(
-                    p.id, p.sku, p.nome, cat_nome, f"R$ {p.preco:.2f}", p.estoque
-                ))
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao carregar produtos: {e}")
-
-    def _delete_product(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("Atenção", "Selecione um item para excluir.")
-            return
+            resultado = self.admin_controller.list_all_orders()
             
-        item = self.tree.item(selected[0])
-        prod_id = item['values'][0] # Pega o ID da primeira coluna
-        
-        if messagebox.askyesno("Confirmar", "Tem certeza que deseja excluir este produto?"):
-            self.service.remover_produto(prod_id)
-            self._load_data() # Atualiza a lista
-            messagebox.showinfo("Sucesso", "Produto removido.")
+            if resultado['success']:
+                pedidos = resultado.get('data', [])
+                
+                for pedido in pedidos:
+                    cliente_nome = pedido.get('cliente_nome', 'N/A')
+                    data = pedido.get('created_at', 'N/A')
+                    status = pedido.get('status', 'N/A')
+                    total = pedido.get('total', 0.0)
+                    qtd_itens = len(pedido.get('itens', []))
+                    
+                    self.tree.insert("", "end", values=(
+                        pedido.get('id'),
+                        cliente_nome,
+                        data,
+                        status,
+                        f"R$ {total:.2f}",
+                        qtd_itens
+                    ))
+            else:
+                messagebox.showerror("Erro", resultado['message'])
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao carregar pedidos: {e}")

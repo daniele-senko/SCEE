@@ -32,9 +32,9 @@ class Config:
     COLOR_TEXT_LIGHT = "#7F8C8D"   # Texto Secundário
     
     # Fontes Padrão (Tuplas para o Tkinter)
-    # Usando apenas fontes do sistema sem especificar família
-    # Evita erro X11 BadLength (RenderAddGlyphs) causado por fontes TrueType
-    FONT_TITLE = ("", 14, "bold")
-    FONT_HEADER = ("", 12, "bold")
-    FONT_BODY = ("", 10)
-    FONT_SMALL = ("", 9)
+    # Usando TkDefaultFont para evitar erro X11 BadLength no Rocky Linux
+    # TkDefaultFont é a fonte bitmap padrão do Tk, não usa RENDER extension
+    FONT_TITLE = ("TkDefaultFont", 14, "bold")
+    FONT_HEADER = ("TkDefaultFont", 12, "bold")
+    FONT_BODY = ("TkDefaultFont", 10)
+    FONT_SMALL = ("TkDefaultFont", 9)

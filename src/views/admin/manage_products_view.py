@@ -12,6 +12,7 @@ class ManageProductsView(tk.Frame):
     def __init__(self, parent, controller, data=None):
         super().__init__(parent, bg=Config.COLOR_BG)
         self.controller = controller
+        self.usuario = data  # Guarda o usuário logado
         self.service = CatalogService()
         
         self._setup_ui()
@@ -35,7 +36,7 @@ class ManageProductsView(tk.Frame):
         tk.Button(
             header, 
             text="Voltar", 
-            command=lambda: self.controller.show_view("AdminDashboard"),
+            command=lambda: self.controller.show_view("AdminDashboard", data=self.usuario),
             bg=Config.COLOR_BG
         ).pack(side="right")
 
@@ -54,6 +55,15 @@ class ManageProductsView(tk.Frame):
             fg="white",
             font=Config.FONT_SMALL,
             command=self._open_add_form
+        ).pack(side="left", padx=5)
+
+        tk.Button(
+            toolbar,
+            text="Editar",
+            bg=Config.COLOR_PRIMARY,
+            fg="white",
+            font=Config.FONT_SMALL,
+            command=self._edit_selected
         ).pack(side="left", padx=5)
 
         tk.Button(
@@ -120,7 +130,30 @@ class ManageProductsView(tk.Frame):
 
     def _open_add_form(self):
         """Navega para a tela de formulário."""
-        self.controller.show_view("ProductFormView")
+        self.controller.show_view("ProductFormView", data=self.usuario)
+
+    def _edit_selected(self):
+        """Abre o formulário de edição para o produto selecionado."""
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Atenção", "Selecione um produto para editar.")
+            return
+        
+        item = self.tree.item(selected[0])
+        produto_id = item['values'][0]
+        
+        # Busca o produto completo
+        try:
+            produtos = self.service.listar_produtos()
+            produto = next((p for p in produtos if p.id == produto_id), None)
+            
+            if produto:
+                # Passa o produto e o usuário para o formulário
+                self.controller.show_view("ProductFormView", data={'usuario': self.usuario, 'produto': produto})
+            else:
+                messagebox.showerror("Erro", "Produto não encontrado.")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao buscar produto: {e}")
 
     def _delete_selected(self):
         """Remove o item selecionado."""

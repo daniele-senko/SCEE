@@ -12,6 +12,15 @@ class ProductFormView(tk.Frame):
     def __init__(self, parent, controller, data=None):
         super().__init__(parent, bg=Config.COLOR_BG)
         self.controller = controller
+        
+        # Trata o data: pode ser só usuario OU {'usuario': ..., 'produto': ...}
+        if isinstance(data, dict) and 'usuario' in data:
+            self.usuario = data['usuario']
+            self.produto = data.get('produto', None)  # Produto para edição (ou None)
+        else:
+            self.usuario = data
+            self.produto = None
+        
         self.service = CatalogService()
         self.categorias_map = {} # Dicionário para guardar {Nome: ID}
         
@@ -25,9 +34,10 @@ class ProductFormView(tk.Frame):
         card.place(relx=0.5, rely=0.5, anchor="center")
 
         # Título
+        titulo_texto = "Editar Produto" if self.produto else "Novo Produto"
         tk.Label(
             card, 
-            text="Novo Produto", 
+            text=titulo_texto, 
             font=Config.FONT_HEADER, 
             bg=Config.COLOR_WHITE,
             fg=Config.COLOR_PRIMARY
@@ -61,7 +71,7 @@ class ProductFormView(tk.Frame):
             bg=Config.COLOR_SECONDARY, 
             fg="white",
             width=12,
-            command=lambda: self.controller.show_view("ManageProducts")
+            command=lambda: self.controller.show_view("ManageProducts", data=self.usuario)
         ).pack(side="left")
 
         # Botão Salvar
@@ -115,17 +125,82 @@ class ProductFormView(tk.Frame):
             print(f"--- DEBUG: Nomes carregados no Combo: {nomes}")
             self.combo_categoria['values'] = nomes
             
-            if nomes:
+            # Se estiver editando, preenche os campos
+            if self.produto:
+                self._fill_form()
+            elif nomes:
                 self.combo_categoria.current(0) # Seleciona o primeiro
                 
         except Exception as e:
             print("❌ ERRO CRÍTICO AO CARREGAR CATEGORIAS:")
             traceback.print_exc() # Imprime o erro completo no terminal
             messagebox.showerror("Erro", f"Falha ao carregar categorias: {e}")
+    
+    def _fill_form(self):
+        """Preenche os campos do formulário com os dados do produto (modo edição)."""
+        if not self.produto:
+            return
+        
+        self.ent_nome.delete(0, tk.END)
+        self.ent_nome.insert(0, self.produto.nome)
+        
+        self.ent_sku.delete(0, tk.END)
+        self.ent_sku.insert(0, self.produto.sku)
+        
+        self.ent_preco.delete(0, tk.END)
+        self.ent_preco.insert(0, f"{self.produto.preco:.2f}")
+        
+        self.ent_estoque.delete(0, tk.END)
+        self.ent_estoque.insert(0, str(self.produto.estoque))
+        
+        # Seleciona a categoria correta
+        if self.produto.categoria:
+            cat_nome = self.produto.categoria.nome
+            if cat_nome in self.categorias_map:
+                idx = list(self.categorias_map.keys()).index(cat_nome)
+                self.combo_categoria.current(idx)
 
     def _handle_save(self):
         try:
             # Coleta dados da tela
+            nome = self.ent_nome.get()
+            sku = self.ent_sku.get()
+            preco = self.ent_preco.get()
+            estoque = self.ent_estoque.get()
+            
+            # Validação da Categoria
+            cat_nome = self.combo_categoria.get()
+            if not cat_nome or cat_nome not in self.categorias_map:
+                raise ValueError("Selecione uma categoria válida.")
+            
+            # Recupera o ID da categoria pelo nome selecionado
+            cat_id = self.categorias_map[cat_nome]
+
+            # Decide se é criação ou atualização
+            if self.produto:
+                # Modo Edição - Atualiza o produto existente
+                self.service.atualizar_produto(
+                    produto_id=self.produto.id,
+                    nome=nome,
+                    sku=sku,
+                    preco=preco,
+                    estoque=estoque,
+                    nome_categoria=cat_nome
+                )
+                messagebox.showinfo("Sucesso", "Produto atualizado!")
+            else:
+                # Modo Criação - Cadastra novo produto
+                self.service.cadastrar_produto(nome, sku, preco, estoque, cat_nome)
+                messagebox.showinfo("Sucesso", "Produto cadastrado!")
+            
+            self.controller.show_view("ManageProducts", data=self.usuario)
+            
+        except ValueError as ve:
+            messagebox.showwarning("Validação", str(ve))
+        except Exception as e:
+            print("❌ ERRO AO SALVAR:")
+            traceback.print_exc()
+            messagebox.showerror("Erro Crítico", f"Não foi possível salvar: {e}")
             nome = self.ent_nome.get()
             sku = self.ent_sku.get()
             preco = self.ent_preco.get()
@@ -145,7 +220,7 @@ class ProductFormView(tk.Frame):
             self.service.cadastrar_produto(nome, sku, preco, estoque, cat_nome)
             
             messagebox.showinfo("Sucesso", "Produto cadastrado!")
-            self.controller.show_view("ManageProducts")
+            self.controller.show_view("ManageProducts", data=self.usuario)
             
         except ValueError as ve:
             messagebox.showwarning("Validação", str(ve))
