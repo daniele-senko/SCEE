@@ -2,38 +2,64 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from src.config.settings import Config
 from src.controllers.admin_controller import AdminController
+from src.views.components.order_details_modal import OrderDetailsModal
+
 
 class ManageOrdersView(tk.Frame):
     """
     Tela de Gestão de Pedidos para Admin.
     """
-    
+
     def __init__(self, parent, controller, data=None):
         super().__init__(parent, bg=Config.COLOR_BG)
         self.controller = controller
         self.usuario = data
         self.admin_controller = AdminController(controller)
-        
-        if self.usuario and hasattr(self.usuario, 'id'):
+
+        if self.usuario and hasattr(self.usuario, "id"):
             self.admin_controller.set_current_admin(self.usuario.id)
-        
+
         self._setup_ui()
         self.after(100, self._load_data)
 
     def _setup_ui(self):
         header = tk.Frame(self, bg=Config.COLOR_WHITE, padx=20, pady=15)
         header.pack(fill="x")
-        
-        tk.Label(header, text="Gerenciar Pedidos", font=Config.FONT_HEADER, bg=Config.COLOR_WHITE, fg=Config.COLOR_PRIMARY).pack(side="left")
-        
-        tk.Button(header, text="Voltar", bg=Config.COLOR_BG, fg=Config.COLOR_TEXT, command=lambda: self.controller.show_view("AdminDashboard", data=self.usuario)).pack(side="right")
+
+        tk.Label(
+            header,
+            text="Gerenciar Pedidos",
+            font=Config.FONT_HEADER,
+            bg=Config.COLOR_WHITE,
+            fg=Config.COLOR_PRIMARY,
+        ).pack(side="left")
+
+        tk.Button(
+            header,
+            text="Voltar",
+            bg=Config.COLOR_BG,
+            fg=Config.COLOR_TEXT,
+            command=lambda: self.controller.show_view(
+                "AdminDashboard", data=self.usuario
+            ),
+        ).pack(side="right")
+
+        tk.Label(
+            content,
+            text="* Dê um duplo clique para ver os itens do pedido",
+            bg=Config.COLOR_BG,
+            fg="gray",
+            font=Config.FONT_SMALL,
+        ).pack(pady=(5, 0), anchor="w")
 
         content = tk.Frame(self, bg=Config.COLOR_BG, padx=20, pady=20)
         content.pack(fill="both", expand=True)
 
         cols = ("ID", "Cliente", "Data", "Status", "Total", "Itens")
-        self.tree = ttk.Treeview(content, columns=cols, show="headings", selectmode="browse")
-        
+        self.tree = ttk.Treeview(
+            content, columns=cols, show="headings", selectmode="browse"
+        )
+
         self.tree.heading("ID", text="ID")
         self.tree.column("ID", width=50, anchor="center")
         self.tree.heading("Cliente", text="Cliente")
@@ -46,7 +72,8 @@ class ManageOrdersView(tk.Frame):
         self.tree.column("Total", width=100, anchor="e")
         self.tree.heading("Itens", text="Itens")
         self.tree.column("Itens", width=50, anchor="center")
-        
+        self.tree.bind("<Double-1>", self._on_double_click)
+
         scrollbar = ttk.Scrollbar(content, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
@@ -54,37 +81,81 @@ class ManageOrdersView(tk.Frame):
 
         action_frame = tk.Frame(self, bg=Config.COLOR_WHITE, padx=20, pady=15)
         action_frame.pack(fill="x", side="bottom")
-        
-        tk.Label(action_frame, text="Alterar Status para:", bg=Config.COLOR_WHITE, font=Config.FONT_BODY).pack(side="left", padx=(0, 10))
-        
-        self.combo_status = ttk.Combobox(action_frame, values=["PENDENTE", "PROCESSANDO", "ENVIADO", "ENTREGUE", "CANCELADO"], state="readonly", width=20)
+
+        tk.Label(
+            action_frame,
+            text="Alterar Status para:",
+            bg=Config.COLOR_WHITE,
+            font=Config.FONT_BODY,
+        ).pack(side="left", padx=(0, 10))
+
+        self.combo_status = ttk.Combobox(
+            action_frame,
+            values=["PENDENTE", "PROCESSANDO", "ENVIADO", "ENTREGUE", "CANCELADO"],
+            state="readonly",
+            width=20,
+        )
         self.combo_status.pack(side="left", padx=10)
         self.combo_status.current(1)
-        
-        tk.Button(action_frame, text="Atualizar Status", bg=Config.COLOR_PRIMARY, fg="white", font=Config.FONT_HEADER, command=self._handle_update_status).pack(side="left")
+
+        tk.Button(
+            action_frame,
+            text="Atualizar Status",
+            bg=Config.COLOR_PRIMARY,
+            fg="white",
+            font=Config.FONT_HEADER,
+            command=self._handle_update_status,
+        ).pack(side="left")
+
+    def _on_double_click(self, event):
+        """Abre modal de detalhes."""
+        selected = self.tree.selection()
+        if not selected:
+            return
+
+        item = self.tree.item(selected[0])
+        pedido_id = item["values"][0]
+
+        # O AdminController pode precisar de um método get_order_details também
+        # Ou podemos usar o order_service diretamente se preferir,
+        # mas idealmente adicionamos get_order_details no AdminController também.
+
+        # Como o AdminController não tinha esse método antes, vamos adicionar uma chamada direta
+        # ou adicionar no controller. Vamos adicionar no Controller Admin pra ficar limpo.
+        res = self.admin_controller.get_order_details(pedido_id)
+
+        if res["success"]:
+            OrderDetailsModal(self, res["data"])
+        else:
+            messagebox.showerror("Erro", res["message"])
 
     def _load_data(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
+
         try:
             resultado = self.admin_controller.list_all_orders()
-            
-            if resultado['success']:
-                pedidos = resultado.get('data', [])
-                if not pedidos: return
+
+            if resultado["success"]:
+                pedidos = resultado.get("data", [])
+                if not pedidos:
+                    return
 
                 for pedido in pedidos:
-                    data_str = str(pedido.get('criado_em', 'N/A'))
-                    
-                    self.tree.insert("", "end", values=(
-                        pedido.get('id'),
-                        pedido.get('cliente_nome', 'Cliente Desconhecido'),
-                        data_str,
-                        pedido.get('status', 'N/A'),
-                        f"R$ {pedido.get('total', 0.0):.2f}",
-                        len(pedido.get('itens', []))
-                    ))
+                    data_str = str(pedido.get("criado_em", "N/A"))
+
+                    self.tree.insert(
+                        "",
+                        "end",
+                        values=(
+                            pedido.get("id"),
+                            pedido.get("cliente_nome", "Cliente Desconhecido"),
+                            data_str,
+                            pedido.get("status", "N/A"),
+                            f"R$ {pedido.get('total', 0.0):.2f}",
+                            len(pedido.get("itens", [])),
+                        ),
+                    )
             else:
                 messagebox.showerror("Erro", f"Erro: {resultado['message']}")
         except Exception as e:
@@ -96,18 +167,20 @@ class ManageOrdersView(tk.Frame):
         if not selected:
             messagebox.showwarning("Aviso", "Selecione um pedido na tabela.")
             return
-            
+
         item = self.tree.item(selected[0])
-        pedido_id = item['values'][0]
+        pedido_id = item["values"][0]
         novo_status = self.combo_status.get()
-        
-        if messagebox.askyesno("Confirmar", f"Mudar pedido #{pedido_id} para {novo_status}?"):
+
+        if messagebox.askyesno(
+            "Confirmar", f"Mudar pedido #{pedido_id} para {novo_status}?"
+        ):
             try:
                 res = self.admin_controller.update_order_status(pedido_id, novo_status)
-                if res['success']:
+                if res["success"]:
                     messagebox.showinfo("Sucesso", "Status atualizado!")
                     self._load_data()
                 else:
-                    messagebox.showerror("Erro", res['message'])
+                    messagebox.showerror("Erro", res["message"])
             except Exception as e:
                 messagebox.showerror("Erro", f"Falha na atualização: {e}")
