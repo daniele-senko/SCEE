@@ -5,37 +5,45 @@ from src.services.catalog_service import CatalogService
 from src.views.components.product_card import ProductCard
 from src.controllers.cart_controller import CartController
 
+
 class HomeView(tk.Frame):
     """
     Tela inicial da loja (Catálogo para o Cliente).
+    Inclui Busca e Filtros (RF05).
     """
 
     def __init__(self, parent, controller, data=None):
         super().__init__(parent, bg=Config.COLOR_BG)
         self.controller = controller
-        self.usuario = data # Usuário logado
+        self.usuario = data  # Usuário logado
         self.service = CatalogService()
         self.cart_controller = CartController(controller)
+
         if self.usuario:
             self.cart_controller.set_current_user(self.usuario.id)
-        
+
+        # Lista completa para cache e filtragem local
+        self.todos_produtos = []
+
         self._setup_header()
+        self._setup_filters()  # <--- NOVO COMPONENTE
         self._setup_catalog_area()
-        # Carrega produtos após renderizar a tela para não travar
+
+        # Carrega produtos após renderizar a tela
         self.after(100, self._load_products)
 
     def _setup_header(self):
         # Barra Superior
         header = tk.Frame(self, bg=Config.COLOR_PRIMARY, padx=20, pady=15)
         header.pack(fill="x")
-        
+
         # Logo / Título
         tk.Label(
-            header, 
-            text="SCEE Store", 
-            font=Config.FONT_TITLE, 
-            bg=Config.COLOR_PRIMARY, 
-            fg="white"
+            header,
+            text="SCEE Store",
+            font=Config.FONT_TITLE,
+            bg=Config.COLOR_PRIMARY,
+            fg="white",
         ).pack(side="left")
 
         # Container de botões do usuário
@@ -45,15 +53,15 @@ class HomeView(tk.Frame):
         # Saudação
         nome = self.usuario.nome.split()[0] if self.usuario else "Visitante"
         tk.Label(
-            user_menu, 
-            text=f"Olá, {nome}", 
-            bg=Config.COLOR_PRIMARY, 
+            user_menu,
+            text=f"Olá, {nome}",
+            bg=Config.COLOR_PRIMARY,
             fg=Config.COLOR_ACCENT,
             font=Config.FONT_BODY,
-            padx=10
+            padx=10,
         ).pack(side="left")
 
-        # Botão Carrinho
+        # Botões de Navegação
         tk.Button(
             user_menu,
             text="🛒 Carrinho",
@@ -62,10 +70,9 @@ class HomeView(tk.Frame):
             relief="flat",
             cursor="hand2",
             padx=10,
-            command=lambda: self.controller.show_view("CartView", data=self.usuario)
+            command=lambda: self.controller.show_view("CartView", data=self.usuario),
         ).pack(side="left", padx=5)
-        
-        # Botão Meus Pedidos
+
         tk.Button(
             user_menu,
             text="📦 Meus Pedidos",
@@ -74,45 +81,88 @@ class HomeView(tk.Frame):
             relief="flat",
             cursor="hand2",
             padx=10,
-            command=lambda: self.controller.show_view("MyOrdersView", data=self.usuario)
+            command=lambda: self.controller.show_view(
+                "MyOrdersView", data=self.usuario
+            ),
         ).pack(side="left", padx=5)
 
-        # Botão Sair
         tk.Button(
-            user_menu, 
-            text="Sair", 
-            bg=Config.COLOR_SECONDARY, 
+            user_menu,
+            text="Sair",
+            bg=Config.COLOR_SECONDARY,
             fg="white",
             relief="flat",
             cursor="hand2",
             padx=10,
-            command=lambda: self.controller.show_view("LoginView")
+            command=lambda: self.controller.show_view("LoginView"),
         ).pack(side="left", padx=5)
+
+    def _setup_filters(self):
+        """Barra de Pesquisa e Filtros (RF05)."""
+        filter_frame = tk.Frame(
+            self, bg="white", padx=20, pady=15, relief="solid", bd=1
+        )
+        filter_frame.pack(fill="x", padx=20, pady=(20, 0))
+
+        # --- Busca por Nome ---
+        tk.Label(
+            filter_frame, text="🔍 Buscar:", bg="white", font=Config.FONT_BODY
+        ).pack(side="left")
+
+        self.ent_busca = tk.Entry(
+            filter_frame, width=30, font=Config.FONT_BODY, bg="#F5F5F5", relief="flat"
+        )
+        self.ent_busca.pack(side="left", padx=(5, 20), ipady=3)
+        self.ent_busca.bind(
+            "<KeyRelease>", self._aplicar_filtros
+        )  # Filtra enquanto digita
+
+        # --- Filtro por Categoria ---
+        tk.Label(
+            filter_frame, text="📂 Categoria:", bg="white", font=Config.FONT_BODY
+        ).pack(side="left")
+
+        self.combo_categoria = ttk.Combobox(filter_frame, state="readonly", width=25)
+        self.combo_categoria.pack(side="left", padx=(5, 20))
+        self.combo_categoria.bind("<<ComboboxSelected>>", self._aplicar_filtros)
+
+        # Botão Limpar
+        tk.Button(
+            filter_frame,
+            text="Limpar Filtros",
+            command=self._limpar_filtros,
+            bg="#E5E7EB",
+            fg="#374151",
+            bd=0,
+            cursor="hand2",
+            font=Config.FONT_SMALL,
+        ).pack(side="right")
 
     def _setup_catalog_area(self):
         """Configura área de rolagem para os produtos."""
-        # Título da seção
         tk.Label(
-            self, 
-            text="Produtos em Destaque", 
-            font=Config.FONT_HEADER, 
+            self,
+            text="Catálogo de Produtos",
+            font=Config.FONT_HEADER,
             bg=Config.COLOR_BG,
-            fg=Config.COLOR_TEXT
-        ).pack(anchor="w", padx=30, pady=(20, 10))
+            fg=Config.COLOR_TEXT,
+        ).pack(anchor="w", padx=30, pady=(15, 10))
 
         # Container de Scroll
         container = tk.Frame(self, bg=Config.COLOR_BG)
         container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
 
         self.canvas = tk.Canvas(container, bg=Config.COLOR_BG, highlightthickness=0)
-        self.scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.canvas.yview)
-        
+        self.scrollbar = ttk.Scrollbar(
+            container, orient="vertical", command=self.canvas.yview
+        )
+
         self.grid_frame = tk.Frame(self.canvas, bg=Config.COLOR_BG)
 
         # Configuração do Scroll
         self.grid_frame.bind(
             "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
         )
 
         self.canvas.create_window((0, 0), window=self.grid_frame, anchor="nw")
@@ -120,67 +170,127 @@ class HomeView(tk.Frame):
 
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
-        
+
         # Scroll com o mouse
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
     def _on_mousewheel(self, event):
-        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def _load_products(self):
         try:
-            produtos = self.service.listar_produtos()
-            
-            # Limpa produtos antigos
-            for widget in self.grid_frame.winfo_children():
-                widget.destroy()
+            # 1. Busca todos os produtos
+            self.todos_produtos = self.service.listar_produtos()
 
-            if not produtos:
-                tk.Label(
-                    self.grid_frame, 
-                    text="Nenhum produto disponível no momento.", 
-                    bg=Config.COLOR_BG,
-                    font=Config.FONT_BODY,
-                    fg="gray"
-                ).pack(pady=50, padx=50)
-                return
+            # 2. Carrega categorias dinamicamente no Combobox
+            self._carregar_categorias_filtro()
 
-            # Grid Responsivo (4 colunas)
-            col = 0
-            row = 0
-            MAX_COLS = 4
-            
-            for prod in produtos:
-                # Filtra apenas ativos
-                if isinstance(prod, dict) and not prod.get('ativo'): continue
-                if hasattr(prod, 'ativo') and not prod.ativo: continue
+            # 3. Exibe todos inicialmente
+            self._update_grid(self.todos_produtos)
 
-                # Cria o card passando a função de adicionar ao carrinho
-                card = ProductCard(self.grid_frame, prod, on_add_cart=self._add_to_cart)
-                card.grid(row=row, column=col, padx=15, pady=15)
-                
-                col += 1
-                if col >= MAX_COLS:
-                    col = 0
-                    row += 1
-                    
         except Exception as e:
             print(f"Erro home: {e}")
-            tk.Label(self.grid_frame, text="Erro ao carregar catálogo.", fg="red").pack()
+            tk.Label(
+                self.grid_frame, text="Erro ao carregar catálogo.", fg="red"
+            ).pack()
+
+    def _carregar_categorias_filtro(self):
+        """Extrai categorias únicas dos produtos para o filtro."""
+        categorias = set()
+        for p in self.todos_produtos:
+            # Tenta pegar nome da categoria do objeto ou dict
+            cat = getattr(p, "categoria", None)
+            nome_cat = None
+
+            if cat and hasattr(cat, "nome"):
+                nome_cat = cat.nome
+            elif isinstance(p, dict) and p.get("categoria_nome"):
+                nome_cat = p["categoria_nome"]
+
+            if nome_cat:
+                categorias.add(nome_cat)
+
+        lista_cats = sorted(list(categorias))
+        self.combo_categoria["values"] = ["Todas"] + lista_cats
+        self.combo_categoria.current(0)
+
+    def _aplicar_filtros(self, event=None):
+        """Filtra a lista localmente."""
+        termo = self.ent_busca.get().lower().strip()
+        cat_selecionada = self.combo_categoria.get()
+
+        produtos_filtrados = []
+
+        for p in self.todos_produtos:
+            # Helper para pegar valores
+            nome = getattr(p, "nome", "").lower()
+
+            # Pega nome da categoria
+            cat_obj = getattr(p, "categoria", None)
+            cat_nome = cat_obj.nome if cat_obj and hasattr(cat_obj, "nome") else ""
+
+            # Filtro de Texto (busca por substring)
+            match_nome = termo in nome
+
+            # Filtro de Categoria
+            match_cat = (cat_selecionada == "Todas" or cat_selecionada == "") or (
+                cat_nome == cat_selecionada
+            )
+
+            # Filtro de Ativo (sempre aplica)
+            ativo = getattr(p, "ativo", 1)
+
+            if match_nome and match_cat and ativo:
+                produtos_filtrados.append(p)
+
+        self._update_grid(produtos_filtrados)
+
+    def _limpar_filtros(self):
+        """Reseta os filtros."""
+        self.ent_busca.delete(0, tk.END)
+        self.combo_categoria.current(0)
+        self._aplicar_filtros()
+
+    def _update_grid(self, produtos):
+        """Redesenha o grid com a lista fornecida."""
+        for widget in self.grid_frame.winfo_children():
+            widget.destroy()
+
+        if not produtos:
+            tk.Label(
+                self.grid_frame,
+                text="Nenhum produto encontrado com estes filtros.",
+                bg=Config.COLOR_BG,
+                font=Config.FONT_BODY,
+                fg="gray",
+            ).pack(pady=50)
+            return
+
+        col = 0
+        row = 0
+        MAX_COLS = 4
+
+        for prod in produtos:
+            card = ProductCard(self.grid_frame, prod, on_add_cart=self._add_to_cart)
+            card.grid(row=row, column=col, padx=15, pady=15)
+
+            col += 1
+            if col >= MAX_COLS:
+                col = 0
+                row += 1
 
     def _add_to_cart(self, produto):
         """Adiciona produto ao carrinho."""
         if not self.usuario:
             messagebox.showwarning("Atenção", "Faça login para comprar!")
             return
-        
-        # Pega ID independente se for Dict ou Objeto
-        prod_id = produto.get('id') if isinstance(produto, dict) else produto.id
-        nome_prod = produto.get('nome') if isinstance(produto, dict) else produto.nome
-        
+
+        prod_id = produto.get("id") if isinstance(produto, dict) else produto.id
+        nome_prod = produto.get("nome") if isinstance(produto, dict) else produto.nome
+
         res = self.cart_controller.add_to_cart(prod_id, quantidade=1)
-        
-        if res['success']:
+
+        if res["success"]:
             messagebox.showinfo("Sucesso", f"'{nome_prod}' adicionado ao carrinho!")
         else:
-            messagebox.showerror("Erro", res['message'])
+            messagebox.showerror("Erro", res["message"])
