@@ -59,7 +59,7 @@ class ManageCategoriesView(tk.Frame):
             command=lambda: self.controller.show_view(
                 "AdminDashboard", data=self.admin_usuario
             ),
-            variant="secondary",  # CORREÇÃO: 'style' alterado para 'variant'
+            variant="secondary",
         ).pack(side="right")
 
     def _build_title_section(self, parent):
@@ -81,7 +81,7 @@ class ManageCategoriesView(tk.Frame):
             title_frame,
             text="➕ Nova Categoria",
             command=self._open_add_form,
-            variant="primary",  # CORREÇÃO: 'style' alterado para 'variant'
+            variant="primary",
         ).pack(side="right")
 
     def _build_table(self, parent):
