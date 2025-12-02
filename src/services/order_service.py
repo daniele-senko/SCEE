@@ -184,37 +184,49 @@ class PedidoService:
             raise StatusInvalidoError(f"Status inválido: {status}")
 
     def _pode_cancelar(self, pedido: Dict[str, Any]) -> bool:
-        """
-        Verifica regras para botão de cancelar.
-        """
+        """Verifica se o pedido pode ser cancelado (Debug Version)."""
+        status = pedido.get("status")
+        print(f"DEBUG CANCELAR: Status do pedido #{pedido.get('id')} é '{status}'")
+
         # 1. Regra de Status
-        if pedido["status"] not in {self.STATUS_PENDENTE, self.STATUS_PROCESSANDO}:
-            print(f"Debug Cancelar: Status '{pedido['status']}' não permite cancelar.")
+        if status not in {self.STATUS_PENDENTE, self.STATUS_PROCESSANDO}:
+            print(
+                f"DEBUG CANCELAR: Bloqueado por status (esperado PENDENTE ou PROCESSANDO)"
+            )
             return False
 
         # 2. Regra de Tempo (24h)
-        criado_em_str = pedido.get("criado_em")
-        if not criado_em_str:
-            return True  # Se não tiver data, assume que pode (fallback)
+        criado_em_raw = pedido.get("criado_em")
+        print(f"DEBUG CANCELAR: Data bruta '{criado_em_raw}'")
+
+        if not criado_em_raw:
+            return True  # Se não tiver data, libera na dúvida
 
         try:
             # Tenta formatos comuns do SQLite
-            if "." in str(criado_em_str):
+            if isinstance(criado_em_raw, datetime):
+                criado_em = criado_em_raw
+            elif "." in str(criado_em_raw):
                 # Formato com milissegundos: "2023-11-30 12:00:00.123456"
                 criado_em = datetime.strptime(
-                    criado_em_str.split(".")[0], "%Y-%m-%d %H:%M:%S"
+                    str(criado_em_raw).split(".")[0], "%Y-%m-%d %H:%M:%S"
                 )
             else:
                 # Formato padrão: "2023-11-30 12:00:00"
-                criado_em = datetime.strptime(criado_em_str, "%Y-%m-%d %H:%M:%S")
+                criado_em = datetime.strptime(str(criado_em_raw), "%Y-%m-%d %H:%M:%S")
 
             tempo_decorrido = datetime.now() - criado_em
+            horas_passadas = tempo_decorrido.total_seconds() / 3600
+
+            print(f"DEBUG CANCELAR: Passaram-se {horas_passadas:.2f} horas")
+
             if tempo_decorrido > timedelta(hours=self.TEMPO_LIMITE_CANCELAMENTO):
-                print(f"Debug Cancelar: Tempo expirado ({tempo_decorrido})")
+                print("DEBUG CANCELAR: Bloqueado por tempo (> 24h)")
                 return False
 
         except Exception as e:
-            print(f"Debug Cancelar: Erro ao processar data '{criado_em_str}': {e}")
+            print(f"DEBUG CANCELAR: Erro ao processar data: {e}")
+            # Em caso de erro de parse, permite cancelar (fail-safe)
             return True
 
         return True

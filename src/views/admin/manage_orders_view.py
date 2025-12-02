@@ -44,16 +44,18 @@ class ManageOrdersView(tk.Frame):
             ),
         ).pack(side="right")
 
+        content = tk.Frame(self, bg=Config.COLOR_BG, padx=20, pady=20)
+        content.pack(fill="both", expand=True)
+
         tk.Label(
             content,
             text="* Dê um duplo clique para ver os itens do pedido",
             bg=Config.COLOR_BG,
             fg="gray",
             font=Config.FONT_SMALL,
-        ).pack(pady=(5, 0), anchor="w")
-
-        content = tk.Frame(self, bg=Config.COLOR_BG, padx=20, pady=20)
-        content.pack(fill="both", expand=True)
+        ).pack(
+            pady=(0, 10), anchor="w"
+        )
 
         cols = ("ID", "Cliente", "Data", "Status", "Total", "Itens")
         self.tree = ttk.Treeview(
@@ -116,12 +118,6 @@ class ManageOrdersView(tk.Frame):
         item = self.tree.item(selected[0])
         pedido_id = item["values"][0]
 
-        # O AdminController pode precisar de um método get_order_details também
-        # Ou podemos usar o order_service diretamente se preferir,
-        # mas idealmente adicionamos get_order_details no AdminController também.
-
-        # Como o AdminController não tinha esse método antes, vamos adicionar uma chamada direta
-        # ou adicionar no controller. Vamos adicionar no Controller Admin pra ficar limpo.
         res = self.admin_controller.get_order_details(pedido_id)
 
         if res["success"]:
