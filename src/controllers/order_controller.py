@@ -1,61 +1,77 @@
 """
 OrderController - Controlador de Pedidos
 ========================================
-Gerencia a visualização de pedidos do cliente.
+
+Gerencia criação e consulta de pedidos.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from src.controllers.base_controller import BaseController
+from src.services.order_service import PedidoService, CancelamentoNaoPermitidoError
 from src.repositories.order_repository import PedidoRepository
 from src.repositories.product_repository import ProductRepository
 from src.repositories.user_repository import UsuarioRepository
-from src.services.order_service import PedidoService
 
 
 class OrderController(BaseController):
     """
-    Controlador para operações relacionadas a pedidos.
+    Controller para operações de pedidos.
     """
 
     def __init__(self, main_window):
         super().__init__(main_window)
-        self.order_repo = PedidoRepository()
-        self.product_repo = ProductRepository()
-        self.user_repo = UsuarioRepository()
-
-        # Instancia o serviço
         self.order_service = PedidoService(
-            self.order_repo, self.product_repo, self.user_repo
+            PedidoRepository(), ProductRepository(), UsuarioRepository()
         )
         self.current_usuario_id = None
 
     def set_current_user(self, usuario_id: int) -> None:
         self.current_usuario_id = usuario_id
 
-    # --- MÉTODO QUE FALTAVA ---
+    def create_order(
+        self,
+        endereco_id: int,
+        itens: List[Dict[str, Any]],
+        tipo_pagamento: str,
+        frete: float = 0.0,
+        observacoes: str = None,
+    ) -> Dict[str, Any]:
+        if not self.current_usuario_id:
+            return self._error_response("Usuário não autenticado")
+
+        if not itens:
+            return self._error_response("Pedido deve ter pelo menos um item")
+
+        try:
+            pedido = self.order_service.criar_pedido(
+                usuario_id=self.current_usuario_id,
+                endereco_id=endereco_id,
+                itens=itens,
+                tipo_pagamento=tipo_pagamento,
+                frete=frete,
+                observacoes=observacoes,
+            )
+
+            return self._success_response(
+                f'Pedido #{pedido["id"]} criado com sucesso!', pedido
+            )
+
+        except Exception as e:
+            return self._error_response("Erro ao criar pedido", e)
+
     def list_my_orders(self) -> Dict[str, Any]:
-        """
-        Lista os pedidos do usuário logado.
-        Usado pela MyOrdersView.
-        """
+        """Lista os pedidos do usuário logado."""
         if not self.current_usuario_id:
             return self._error_response("Usuário não autenticado")
 
         try:
             # Chama o repositório diretamente para leitura (mais eficiente)
             # ou o service se tiver regras de negócio (ex: formatação)
-            pedidos = self.order_repo.listar_por_usuario(self.current_usuario_id)
+            pedidos = self.order_service.listar_pedidos_usuario(self.current_usuario_id)
 
             # Formata ou enriquece os dados se necessário
-            # Ex: Garantir que 'total' seja float
             for p in pedidos:
                 p["total"] = float(p["total"])
-
-                # Se não tiver a lista de itens carregada, busca agora
-                # (O listar_por_usuario do repo simples pode não trazer itens)
-                if "itens" not in p:
-                    p["itens"] = self.order_repo.listar_itens(p["id"])
-
             return self._success_response(
                 f"{len(pedidos)} pedidos encontrados", pedidos
             )
@@ -64,15 +80,45 @@ class OrderController(BaseController):
             return self._error_response("Erro ao listar pedidos", e)
 
     def get_order_details(self, pedido_id: int) -> Dict[str, Any]:
-        """Busca detalhes completos de um pedido."""
+        """
+        Obtém detalhes completos de um pedido.
+        """
+        if not self.current_usuario_id:
+            return self._error_response("Usuário não autenticado")
+
         try:
-            # O repositório já tem o método buscar_completo
-            pedido = self.order_repo.buscar_completo(pedido_id)
+            pedido = self.order_service.obter_historico_completo(pedido_id)
 
             if not pedido:
                 return self._error_response("Pedido não encontrado")
 
-            return self._success_response("Detalhes recuperados", pedido)
+            # Verificar se o pedido pertence ao usuário
+            if pedido["usuario_id"] != self.current_usuario_id:
+                return self._error_response("Acesso negado")
+
+            return self._success_response("Pedido encontrado", pedido)
 
         except Exception as e:
-            return self._error_response("Erro ao buscar detalhes", e)
+            return self._error_response("Erro ao buscar pedido", e)
+
+        except Exception as e:
+            return self._error_response("Erro ao buscar pedido", e)
+
+    def cancel_order(self, pedido_id: int) -> Dict[str, Any]:
+        """Solicita o cancelamento de um pedido."""
+        if not self.current_usuario_id:
+            return self._error_response("Usuário não autenticado")
+
+        try:
+            # Chama o serviço passando o ID do usuário para garantir que ele é o dono
+            self.order_service.cancelar_pedido(
+                pedido_id,
+                usuario_id=self.current_usuario_id,
+                motivo="Cancelado pelo cliente via Portal",
+            )
+            return self._success_response("Pedido cancelado com sucesso!")
+
+        except CancelamentoNaoPermitidoError as e:
+            return self._error_response(str(e))
+        except Exception as e:
+            return self._error_response("Erro ao cancelar pedido", e)
