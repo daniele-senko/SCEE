@@ -15,8 +15,6 @@ class StatusPedido(str, Enum):
     ENVIADO = 'ENVIADO'
     ENTREGUE = 'ENTREGUE'
     CANCELADO = 'CANCELADO'
-    # CORREÇÃO: Mudamos de 'PAGAMENTO_PENDENTE' para 'PENDENTE'
-    # Isso alinha o código Python com a regra CHECK(status IN ('PENDENTE'...)) do SQLite
     PAGAMENTO_PENDENTE = 'PENDENTE' 
 
 # --- ENUMERAÇÕES PARA INTEGRAÇÃO E SERVIÇOS ---

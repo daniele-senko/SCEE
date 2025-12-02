@@ -156,7 +156,6 @@ class ProductFormView(tk.Frame):
             self.categorias_map = {}
 
             for c in cats:
-                # CORREÇÃO CRÍTICA: Verificação explícita de tipo para evitar erro de atributo
                 if isinstance(c, dict):
                     nome = c["nome"]
                     c_id = c["id"]

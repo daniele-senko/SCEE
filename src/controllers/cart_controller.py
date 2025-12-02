@@ -24,7 +24,6 @@ class CartController(BaseController):
             return self._error_response('Usuário não autenticado')
         
         try:
-            # CORREÇÃO: Usa o método que já traz tudo calculado e estruturado
             cart_data = self.cart_service.obter_carrinho_completo(self.current_usuario_id)
             
             return self._success_response(
